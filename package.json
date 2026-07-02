@@ -1,0 +1,17 @@
+{
+  "name": "innovative-dating",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Innovative Dating Application Ecosystem",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "web": "cd web-portal && npm run dev",
+    "admin": "cd admin-portal && npm run dev",
+    "mobile": "cd mobile && npx expo start",
+    "install:all": "npm install --prefix backend && npm install --prefix web-portal && npm install --prefix admin-portal && npm install --prefix mobile",
+    "dev": "concurrently \"npm run backend\" \"npm run web\" \"npm run admin\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
