@@ -3,13 +3,21 @@ import { useAuth } from '../context/AuthContext';
 import { userAPI, subscriptionAPI } from '../services/api';
 import toast from 'react-hot-toast';
 
+const SKILL_OPTIONS = ['React', 'Node.js', 'Python', 'JavaScript', 'TypeScript', 'UI/UX Design', 'Product Management', 'Data Science', 'DevOps', 'Machine Learning', 'Graphic Design', 'Flutter', 'React Native', 'AWS', 'Docker', 'Figma', 'SEO', 'Content Writing', 'Digital Marketing', 'Project Management'];
+
+const INTENT_OPTIONS = ['Hire', 'Be Hired', 'Collaborate', 'Mentor', 'Find Co-founder', 'Freelance', 'Learn', 'Network'];
+
+const EXPERIENCE_LEVELS = ['Entry Level', 'Junior', 'Mid-Level', 'Senior', 'Lead', 'Executive'];
+
 export default function Settings() {
   const { user, setUser, logout } = useAuth();
   const [tab, setTab] = useState('preferences');
   const [preferences, setPreferences] = useState({
-    ageRange: { min: 18, max: 60 },
+    skills: [],
+    intents: [],
+    experienceLevel: '',
+    rolePreference: [],
     maxDistance: 50,
-    genderPreference: [],
   });
   const [subscription, setSubscription] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -29,9 +37,11 @@ export default function Settings() {
       setSubscription(subRes.data);
       setPlans(Object.values(plansRes.data));
       setPreferences({
-        ageRange: user.preferences?.ageRange || { min: 18, max: 60 },
+        skills: user.skills || [],
+        intents: user.intents || [],
+        experienceLevel: user.experienceLevel || '',
+        rolePreference: user.preferences?.rolePreference || [],
         maxDistance: user.preferences?.maxDistance || 50,
-        genderPreference: user.preferences?.genderPreference || [],
       });
       setLocation({
         city: user.location?.city || '',
@@ -46,7 +56,7 @@ export default function Settings() {
 
   const savePreferences = async () => {
     try {
-      await userAPI.updatePreferences(preferences);
+      await userAPI.updateProfile(preferences);
       toast.success('Preferences saved!');
     } catch (err) {
       toast.error('Failed to save preferences');
@@ -94,13 +104,31 @@ export default function Settings() {
     }
   };
 
+  const toggleSkill = (skill) => {
+    setPreferences(prev => ({
+      ...prev,
+      skills: prev.skills?.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...(prev.skills || []), skill],
+    }));
+  };
+
+  const toggleIntent = (intent) => {
+    setPreferences(prev => ({
+      ...prev,
+      intents: prev.intents?.includes(intent)
+        ? prev.intents.filter(i => i !== intent)
+        : [...(prev.intents || []), intent],
+    }));
+  };
+
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
 
   return (
     <div className="settings-page page-transition">
       <div className="settings-tabs">
         {[
-          { id: 'preferences', label: 'Preferences', icon: '🎯' },
+          { id: 'preferences', label: 'Skills & Intents', icon: '🎯' },
           { id: 'location', label: 'Location', icon: '📍' },
           { id: 'subscription', label: 'Subscription', icon: '💎' },
           { id: 'account', label: 'Account', icon: '🔒' },
@@ -114,39 +142,46 @@ export default function Settings() {
       <div className="settings-content">
         {tab === 'preferences' && (
           <div className="card">
-            <h2>Matching Preferences</h2>
-            <div className="form-row">
-              <div className="form-group">
-                <label>Min Age</label>
-                <input type="number" value={preferences.ageRange.min} onChange={e => setPreferences({ ...preferences, ageRange: { ...preferences.ageRange, min: parseInt(e.target.value) } })} min={18} max={100} />
+            <h2>Professional Preferences</h2>
+            <div className="form-group">
+              <label>Skills</label>
+              <div className="interests-grid">
+                {SKILL_OPTIONS.map(s => (
+                  <button
+                    key={s}
+                    className={`interest-chip ${preferences.skills?.includes(s) ? 'selected' : ''}`}
+                    onClick={() => toggleSkill(s)}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
-              <div className="form-group">
-                <label>Max Age</label>
-                <input type="number" value={preferences.ageRange.max} onChange={e => setPreferences({ ...preferences, ageRange: { ...preferences.ageRange, max: parseInt(e.target.value) } })} min={18} max={100} />
+            </div>
+            <div className="form-group">
+              <label>Professional Intents</label>
+              <div className="interests-grid">
+                {INTENT_OPTIONS.map(i => (
+                  <button
+                    key={i}
+                    className={`interest-chip ${preferences.intents?.includes(i) ? 'selected' : ''}`}
+                    onClick={() => toggleIntent(i)}
+                  >
+                    {i}
+                  </button>
+                ))}
               </div>
+            </div>
+            <div className="form-group">
+              <label>Experience Level</label>
+              <select value={preferences.experienceLevel} onChange={e => setPreferences({ ...preferences, experienceLevel: e.target.value })}>
+                <option value="">Select level</option>
+                {EXPERIENCE_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
             </div>
             <div className="form-group">
               <label>Max Distance (miles)</label>
               <input type="range" value={preferences.maxDistance} onChange={e => setPreferences({ ...preferences, maxDistance: parseInt(e.target.value) })} min={1} max={500} />
               <span>{preferences.maxDistance} miles</span>
-            </div>
-            <div className="form-group">
-              <label>Interested In</label>
-              <div className="checkbox-group">
-                {['male', 'female', 'non-binary', 'other'].map(g => (
-                  <label key={g} className="checkbox-label">
-                    <input type="checkbox" checked={preferences.genderPreference.includes(g)} onChange={() => {
-                      setPreferences(prev => ({
-                        ...prev,
-                        genderPreference: prev.genderPreference.includes(g)
-                          ? prev.genderPreference.filter(x => x !== g)
-                          : [...prev.genderPreference, g],
-                      }));
-                    }} />
-                    {g.charAt(0).toUpperCase() + g.slice(1)}
-                  </label>
-                ))}
-              </div>
             </div>
             <button className="btn btn-primary" onClick={savePreferences}>Save Preferences</button>
           </div>
@@ -155,7 +190,7 @@ export default function Settings() {
         {tab === 'location' && (
           <div className="card">
             <h2>Your Location</h2>
-            <p className="settings-desc">Set your location to find matches near you</p>
+            <p className="settings-desc">Set your location to find professionals near you</p>
             <div className="form-group">
               <label>City</label>
               <input value={location.city} onChange={e => setLocation({ ...location, city: e.target.value })} placeholder="San Francisco" />
@@ -214,12 +249,12 @@ export default function Settings() {
         .settings-page { max-width: 800px; margin: 0 auto; display: flex; gap: 24px; }
         .settings-tabs { width: 200px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
         .settings-tab { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-radius: var(--radius-sm); background: transparent; color: var(--text-light); font-weight: 500; transition: all 0.2s; text-align: left; }
-        .settings-tab.active, .settings-tab:hover { background: rgba(233,64,87,0.1); color: var(--primary); }
+        .settings-tab.active, .settings-tab:hover { background: rgba(74,108,247,0.1); color: var(--primary); }
         .settings-content { flex: 1; }
         .settings-desc { color: var(--text-light); margin-bottom: 20px; }
-        .checkbox-group { display: flex; gap: 16px; flex-wrap: wrap; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .checkbox-label input { width: auto; }
+        .interests-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .interest-chip { padding: 8px 16px; border-radius: 20px; border: 2px solid var(--border); background: var(--card); cursor: pointer; transition: all 0.2s; font-size: 14px; }
+        .interest-chip.selected { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; border-color: transparent; }
         .plans-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
         .plan-card { padding: 24px; text-align: center; }
         .plan-card.active-plan { border: 2px solid var(--primary); }

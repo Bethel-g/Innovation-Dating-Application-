@@ -8,13 +8,23 @@ import Message from '../models/Message.js';
 import Subscription from '../models/Subscription.js';
 import NotificationCampaign from '../models/NotificationCampaign.js';
 import Notification from '../models/Notification.js';
+import Project from '../models/Project.js';
+import Community from '../models/Community.js';
+import CommunityMember from '../models/CommunityMember.js';
+import ProjectMember from '../models/ProjectMember.js';
+import Post from '../models/Post.js';
+import Comment from '../models/Comment.js';
+import Like from '../models/Like.js';
+import Follow from '../models/Follow.js';
 import { processCampaign } from '../services/notificationService.js';
 
 export const getDashboardStats = async (req, res) => {
   try {
+    const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
     const [
       totalUsers, activeUsers, verifiedUsers, totalMatches,
       totalReports, pendingReports, premiumSubscriptions, messagesToday,
+      totalProjects, totalCommunities, totalCampaigns, newUsersToday,
     ] = await Promise.all([
       User.count(),
       User.count({ where: { isOnline: true } }),
@@ -24,13 +34,18 @@ export const getDashboardStats = async (req, res) => {
       Report.count({ where: { status: 'pending' } }),
       Subscription.count({ where: { isActive: true, tier: { [Op.ne]: 'free' } } }),
       Message.count({
-        where: { createdAt: { [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)) } },
+        where: { createdAt: { [Op.gte]: todayStart } },
       }),
+      Project.count(),
+      Community.count(),
+      NotificationCampaign.count(),
+      User.count({ where: { createdAt: { [Op.gte]: todayStart } } }),
     ]);
 
     res.json({
       totalUsers, activeUsers, verifiedUsers, totalMatches,
       totalReports, pendingReports, premiumSubscriptions, messagesToday,
+      totalProjects, totalCommunities, totalCampaigns, newUsersToday,
       matchRate: totalUsers > 0 ? ((totalMatches / totalUsers) * 100).toFixed(2) : 0,
     });
   } catch (error) {
@@ -350,6 +365,323 @@ export const sendCampaign = async (req, res) => {
 
     await processCampaign(campaign.id);
     res.json({ message: 'Campaign sent' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ───── Social Media / Post Management ───── */
+
+export const getPosts = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search, type, isDraft } = req.query;
+    const where = {};
+    if (search) where.content = { [Op.iLike]: `%${search}%` };
+    if (type) where.type = type;
+    if (isDraft !== undefined) where.isDraft = isDraft === 'true';
+
+    const posts = await Post.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    const total = await Post.count({ where });
+
+    const authorIds = [...new Set(posts.map(p => p.author))];
+    const authors = await User.findAll({
+      where: { id: authorIds },
+      attributes: ['id', 'name', 'email', 'headline'],
+    });
+    const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
+
+    const enriched = posts.map(p => ({
+      ...p.toJSON(),
+      author: authorMap[p.author] || { id: p.author },
+    }));
+
+    res.json({ posts: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deletePost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    await Comment.destroy({ where: { post: req.params.id } });
+    await Like.destroy({ where: { targetId: req.params.id, targetType: 'post' } });
+    await post.destroy();
+
+    res.json({ message: 'Post deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ───── Comment Management ───── */
+
+export const getComments = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search, isFlagged } = req.query;
+    const where = {};
+    if (search) where.content = { [Op.iLike]: `%${search}%` };
+    if (isFlagged !== undefined) where.isFlagged = isFlagged === 'true';
+
+    const comments = await Comment.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    const total = await Comment.count({ where });
+
+    const authorIds = [...new Set(comments.map(c => c.author))];
+    const authors = await User.findAll({
+      where: { id: authorIds },
+      attributes: ['id', 'name', 'email'],
+    });
+    const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
+
+    const enriched = comments.map(c => ({
+      ...c.toJSON(),
+      author: authorMap[c.author] || { id: c.author },
+    }));
+
+    res.json({ comments: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateComment = async (req, res) => {
+  try {
+    const comment = await Comment.findByPk(req.params.id);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    const { isFlagged, content } = req.body;
+    if (isFlagged !== undefined) comment.isFlagged = isFlagged;
+    if (content !== undefined) comment.content = content;
+
+    await comment.save();
+    res.json(comment);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    const comment = await Comment.findByPk(req.params.id);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    await Like.destroy({ where: { targetId: req.params.id, targetType: 'comment' } });
+    await comment.destroy();
+
+    res.json({ message: 'Comment deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ───── Community Management ───── */
+
+export const getCommunities = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search, visibility } = req.query;
+    const where = {};
+    if (search) where.name = { [Op.iLike]: `%${search}%` };
+    if (visibility) where.visibility = visibility;
+
+    const communities = await Community.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    const total = await Community.count({ where });
+
+    const authorIds = [...new Set(communities.map(c => c.author))];
+    const authors = await User.findAll({
+      where: { id: authorIds },
+      attributes: ['id', 'name', 'email'],
+    });
+    const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
+
+    const enriched = await Promise.all(communities.map(async c => {
+      const memberCount = await CommunityMember.count({ where: { community: c.id, status: 'approved' } });
+      return {
+        ...c.toJSON(),
+        author: authorMap[c.author] || { id: c.author },
+        memberCount,
+      };
+    }));
+
+    res.json({ communities: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateCommunity = async (req, res) => {
+  try {
+    const community = await Community.findByPk(req.params.id);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    const { name, description, visibility, isVerified, tags } = req.body;
+    if (name) community.name = name;
+    if (description) community.description = description;
+    if (visibility) community.visibility = visibility;
+    if (isVerified !== undefined) community.isVerified = isVerified;
+    if (tags) community.tags = tags;
+
+    await community.save();
+    res.json(community);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteCommunity = async (req, res) => {
+  try {
+    const community = await Community.findByPk(req.params.id);
+    if (!community) return res.status(404).json({ message: 'Community not found' });
+
+    await CommunityMember.destroy({ where: { community: req.params.id } });
+    await community.destroy();
+
+    res.json({ message: 'Community deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ───── Project Management ───── */
+
+export const getProjects = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search, status } = req.query;
+    const where = {};
+    if (search) where[Op.or] = [
+      { title: { [Op.iLike]: `%${search}%` } },
+      { description: { [Op.iLike]: `%${search}%` } },
+    ];
+    if (status) where.status = status;
+
+    const projects = await Project.findAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    const total = await Project.count({ where });
+
+    const authorIds = [...new Set(projects.map(p => p.author))];
+    const authors = await User.findAll({
+      where: { id: authorIds },
+      attributes: ['id', 'name', 'email', 'headline'],
+    });
+    const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
+
+    const enriched = await Promise.all(projects.map(async p => {
+      const memberCount = await ProjectMember.count({ where: { project: p.id, status: 'approved' } });
+      return {
+        ...p.toJSON(),
+        author: authorMap[p.author] || { id: p.author },
+        memberCount,
+      };
+    }));
+
+    res.json({ projects: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateProject = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    const { title, tagline, description, status, stage } = req.body;
+    if (title) project.title = title;
+    if (tagline) project.tagline = tagline;
+    if (description) project.description = description;
+    if (status) project.status = status;
+    if (stage) project.stage = stage;
+
+    await project.save();
+    res.json(project);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteProject = async (req, res) => {
+  try {
+    const project = await Project.findByPk(req.params.id);
+    if (!project) return res.status(404).json({ message: 'Project not found' });
+
+    await ProjectMember.destroy({ where: { project: req.params.id } });
+    await project.destroy();
+
+    res.json({ message: 'Project deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/* ───── Role & Permission Management ───── */
+
+const AVAILABLE_ROLES = ['member', 'support', 'moderator', 'admin'];
+const AVAILABLE_PERMISSIONS = [
+  'userManagement',
+  'contentModeration',
+  'analytics',
+  'notificationManagement',
+  'subscriptionManagement',
+  'communityManagement',
+  'projectManagement',
+  'socialMediaModeration',
+];
+
+export const getRoles = async (req, res) => {
+  try {
+    const roleDefinitions = {
+      admin: { label: 'Admin', permissions: AVAILABLE_PERMISSIONS, description: 'Full system access' },
+      moderator: { label: 'Moderator', permissions: ['contentModeration', 'socialMediaModeration', 'userManagement'], description: 'Content & user moderation' },
+      support: { label: 'Support', permissions: ['userManagement', 'notificationManagement'], description: 'User support & campaigns' },
+      member: { label: 'Member', permissions: [], description: 'Standard user' },
+    };
+
+    res.json({ roles: roleDefinitions, availablePermissions: AVAILABLE_PERMISSIONS });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const updateUserRole = async (req, res) => {
+  try {
+    const { role, permissions } = req.body;
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    if (role) {
+      if (!AVAILABLE_ROLES.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role' });
+      }
+      user.role = role;
+    }
+    if (permissions) user.permissions = permissions;
+
+    await user.save();
+    res.json({ user, message: 'Role & permissions updated' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

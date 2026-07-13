@@ -5,6 +5,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cron from 'node-cron';
 
 import connectDB, { isDBReady } from './config/db.js';
 import { setupSocket } from './socket/index.js';
@@ -33,6 +34,7 @@ import notificationRoutes from './routes/notifications.js';
 import subscriptionRoutes from './routes/subscriptions.js';
 import adminRoutes from './routes/admin.js';
 import feedRoutes from './routes/feed.js';
+import User from './models/User.js';
 import projectRoutes from './routes/projects.js';
 import communityRoutes from './routes/communities.js';
 
@@ -88,15 +90,28 @@ app.get('/api/health', (req, res) => {
 
 setupSocket(io);
 
+// Reset daily swipes at midnight every day
+cron.schedule('0 0 * * *', async () => {
+  try {
+    await User.update({ dailySwipes: 0 }, { where: {} });
+    console.log('Daily swipes reset at', new Date().toISOString());
+  } catch (err) {
+    console.error('Failed to reset daily swipes:', err.message);
+  }
+});
+
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-  console.log('Server ready: database connected');
-}).catch((err) => {
-  console.warn('Warning: Database connection failed — server still running, but routes will return 503');
-});
-
-httpServer.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`DB status: ${isDBReady() ? 'connected' : 'disconnected'}`);
-});
+connectDB()
+  .then(() => {
+    console.log('Database connected');
+  })
+  .catch((err) => {
+    console.warn('Warning: Database connection failed — server still running, but routes will return 503');
+  })
+  .finally(() => {
+    httpServer.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+      console.log(`DB status: ${isDBReady() ? 'connected' : 'disconnected'}`);
+    });
+  });

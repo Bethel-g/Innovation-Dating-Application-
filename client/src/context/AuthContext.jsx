@@ -22,19 +22,22 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const hydrateSession = (tokenValue, userData) => {
+    if (tokenValue) localStorage.setItem('token', tokenValue);
+    if (userData) localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData || null);
+    return userData;
+  };
+
   const login = async (email, password) => {
     const res = await authAPI.login({ email, password });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    hydrateSession(res.data.token, res.data.user);
     return res.data;
   };
 
   const register = async (data) => {
     const res = await authAPI.register(data);
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    hydrateSession(res.data.token, res.data.user);
     return res.data;
   };
 
@@ -46,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser, hydrateSession }}>
       {children}
     </AuthContext.Provider>
   );

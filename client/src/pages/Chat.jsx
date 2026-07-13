@@ -57,7 +57,7 @@ export default function Chat() {
 
     socket.on('message_read', ({ messageId }) => {
       setMessages(prev => prev.map(m =>
-        m._id === messageId ? { ...m, isRead: true, readAt: new Date() } : m
+        m.id === messageId ? { ...m, isRead: true, readAt: new Date() } : m
       ));
     });
   };
@@ -113,7 +113,7 @@ export default function Chat() {
 
   const getOtherUser = (match) => {
     if (!match?.users) return null;
-    return match.users.find(u => u._id !== user?._id);
+    return match.users.find(u => u.id !== user?.id);
   };
 
   if (loading) return <div className="loading-screen"><div className="spinner" /></div>;
@@ -122,12 +122,12 @@ export default function Chat() {
     return (
       <div className="chat-page">
         <div className="conversations-panel">
-          <h2 className="chat-heading">Conversations</h2>
+          <h2 className="chat-heading">Messages</h2>
           {conversations.length > 0 ? (
             conversations.map(conv => {
               const other = conv.otherUser;
               return (
-                <Link to={`/chat/${conv.match._id}`} key={conv.match._id} className="conversation-item">
+                <Link to={`/chat/${conv.match.id}`} key={conv.match.id} className="conversation-item">
                   <div className="avatar">
                     {other?.photos?.[0]?.url ? (
                       <img src={other.photos[0].url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -135,6 +135,7 @@ export default function Chat() {
                   </div>
                   <div className="conversation-info">
                     <strong>{other?.name || 'Unknown'}</strong>
+                    {other?.headline && <p className="conversation-meta">{other.headline}</p>}
                     <p className="conversation-last">
                       {conv.lastMessage
                         ? conv.lastMessage.content.substring(0, 40)
@@ -150,8 +151,8 @@ export default function Chat() {
           ) : (
             <div className="empty-state">
               <h3>No conversations</h3>
-              <p>Match with someone to start chatting!</p>
-              <Link to="/matches" className="btn btn-primary">Find Matches</Link>
+              <p>Connect with someone to start collaborating!</p>
+              <Link to="/matches" className="btn btn-primary">Find Connections</Link>
             </div>
           )}
         </div>
@@ -159,18 +160,18 @@ export default function Chat() {
     );
   }
 
-  const currentConv = conversations.find(c => c.match._id === matchId);
+  const currentConv = conversations.find(c => c.match.id === matchId);
   const otherUser = currentConv?.otherUser;
 
   return (
     <div className="chat-page chat-active">
       <div className="conversations-panel">
-        <h2 className="chat-heading">Conversations</h2>
+        <h2 className="chat-heading">Messages</h2>
         {conversations.map(conv => {
           const other = conv.otherUser;
           return (
-            <Link to={`/chat/${conv.match._id}`} key={conv.match._id}
-              className={`conversation-item ${conv.match._id === matchId ? 'active' : ''}`}>
+            <Link to={`/chat/${conv.match.id}`} key={conv.match.id}
+              className={`conversation-item ${conv.match.id === matchId ? 'active' : ''}`}>
               <div className="avatar">
                 {other?.photos?.[0]?.url ? (
                   <img src={other.photos[0].url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -194,27 +195,33 @@ export default function Chat() {
               <img src={otherUser.photos[0].url} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
             ) : otherUser?.name?.[0]}
           </div>
-          <div>
+          <div className="chat-header-info">
             <strong>{otherUser?.name}</strong>
+            {otherUser?.headline && <p className="chat-header-headline">{otherUser.headline}</p>}
             <p className="online-status">{otherUser?.isOnline ? 'Online' : 'Offline'}</p>
           </div>
+          {otherUser?.skills?.length > 0 && (
+            <div className="chat-header-skills">
+              {otherUser.skills.slice(0, 3).map(s => <span key={s} className="tag-skill">{s}</span>)}
+            </div>
+          )}
         </div>
 
         <div className="chat-messages">
           {icebreaker && messages.length === 0 && (
             <div className="icebreaker-box">
-              <p className="icebreaker-label">💡 Conversation starter:</p>
+              <p className="icebreaker-label">💡 Conversation starter based on shared skills:</p>
               <p className="icebreaker-text">{icebreaker.prompt}</p>
             </div>
           )}
 
           {messages.map(msg => (
-            <div key={msg._id} className={`message ${msg.sender._id === user?._id ? 'sent' : 'received'}`}>
+            <div key={msg.id} className={`message ${msg.sender.id === user?.id ? 'sent' : 'received'}`}>
               <div className="message-bubble">
                 <p>{msg.content}</p>
                 <span className="message-time">
                   {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  {msg.sender._id === user?._id && (
+                  {msg.sender.id === user?.id && (
                     <span className="read-status">{msg.isRead ? ' ✓✓' : ' ✓'}</span>
                   )}
                 </span>
@@ -247,16 +254,20 @@ export default function Chat() {
         .chat-active .conversations-panel { width: 320px; border-right: 1px solid var(--border); overflow-y: auto; }
         .chat-heading { padding: 20px; font-size: 20px; border-bottom: 1px solid var(--border); }
         .conversation-item { display: flex; align-items: center; gap: 12px; padding: 14px 20px; transition: background 0.2s; }
-        .conversation-item:hover, .conversation-item.active { background: rgba(233,64,87,0.05); }
+        .conversation-item:hover, .conversation-item.active { background: rgba(74,108,247,0.05); }
         .conversation-info { flex: 1; min-width: 0; }
+        .conversation-meta { font-size: 12px; color: var(--primary); }
         .conversation-last { color: var(--text-light); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: var(--primary); color: #fff; font-size: 12px; padding: 2px 8px; border-radius: 10px; }
         .chat-main { flex: 1; display: flex; flex-direction: column; }
         .chat-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--card); }
+        .chat-header-info { flex-shrink: 0; }
+        .chat-header-headline { font-size: 12px; color: var(--primary); }
+        .chat-header-skills { display: flex; gap: 4px; margin-left: auto; }
         .back-btn { display: none; font-size: 20px; color: var(--primary); }
         .online-status { font-size: 12px; color: var(--success); }
         .chat-messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .icebreaker-box { background: rgba(233,64,87,0.05); padding: 16px; border-radius: var(--radius); margin-bottom: 16px; text-align: center; }
+        .icebreaker-box { background: rgba(74,108,247,0.05); padding: 16px; border-radius: var(--radius); margin-bottom: 16px; text-align: center; }
         .icebreaker-label { font-size: 13px; color: var(--text-light); margin-bottom: 4px; }
         .icebreaker-text { font-weight: 500; }
         .message { max-width: 70%; }

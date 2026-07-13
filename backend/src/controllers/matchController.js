@@ -1,7 +1,7 @@
 import { Op } from 'sequelize';
 import Match from '../models/Match.js';
 import User from '../models/User.js';
-import { findPotentialMatches, findHealthSectorMatches, calculateCompatibility } from '../services/matchingService.js';
+import { findPotentialMatches, calculateCompatibility } from '../services/matchingService.js';
 import { jsonbContains } from '../utils/jsonContains.js';
 import { sendMatchNotification, sendLikeNotification, sendSuggestionNotification } from '../services/notificationService.js';
 import { generateMatchInsight } from '../services/aiService.js';
@@ -46,20 +46,14 @@ export const swipe = async (req, res) => {
         match.status = 'matched';
         match.matchedAt = new Date();
         await match.save();
-        await User.update(
-          { dailySwipes: sequelize.literal('"dailySwipes" + 1') },
-          { where: { id: userId } }
-        );
+        await User.increment('dailySwipes', { by: 1, where: { id: userId } });
         await sendMatchNotification(userId, targetUserId);
         const users = await User.findAll({ where: { id: userIds } });
         return res.json({ match: { ...match.toJSON(), users }, isMatch: true });
       }
 
       await sendLikeNotification(userId, targetUserId, isSuperLike ? 'super_like' : 'profile_like');
-      await User.update(
-        { dailySwipes: sequelize.literal('"dailySwipes" + 1') },
-        { where: { id: userId } }
-      );
+      await User.increment('dailySwipes', { by: 1, where: { id: userId } });
 
       const users = await User.findAll({ where: { id: match.users } });
       return res.json({ match: { ...match.toJSON(), users }, isMatch: false });
@@ -71,10 +65,7 @@ export const swipe = async (req, res) => {
       status: isSuperLike ? 'super_liked' : 'liked',
     });
 
-    await User.update(
-      { dailySwipes: sequelize.literal('"dailySwipes" + 1') },
-      { where: { id: userId } }
-    );
+    await User.increment('dailySwipes', { by: 1, where: { id: userId } });
     await sendLikeNotification(userId, targetUserId, isSuperLike ? 'super_like' : 'profile_like');
 
     const users = await User.findAll({ where: { id: match.users } });
@@ -131,15 +122,6 @@ export const getPotentialMatches = async (req, res) => {
 export const getDailySuggestions = async (req, res) => {
   try {
     const matches = await findPotentialMatches(req.userId, 10);
-    res.json(matches);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const getHealthSectorMatches = async (req, res) => {
-  try {
-    const matches = await findHealthSectorMatches(req.userId, 20);
     res.json(matches);
   } catch (error) {
     res.status(500).json({ message: error.message });

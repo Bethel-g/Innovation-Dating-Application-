@@ -9,9 +9,12 @@ import { calculateInnovationScore, generatePersonalityProfile } from '../service
 export const updateProfile = async (req, res) => {
   try {
     const allowedFields = [
-      'name', 'bio', 'dateOfBirth', 'gender', 'interestedIn', 'interests',
+      'name', 'headline', 'bio', 'dateOfBirth', 'gender',
+      'skills', 'primarySkills', 'secondarySkills', 'intents',
+      'experienceLevel', 'yearsOfExperience', 'interests',
+      'portfolioUrls', 'githubUrl', 'behanceUrl', 'websiteUrl', 'linkedinUrl',
       'healthSpecialty', 'workSetting', 'innovationFocus', 'personalityTraits',
-      'certifications', 'education', 'yearsOfExperience',
+      'certifications', 'education',
       'collaborationIntent', 'lookingForTeam', 'availableForProjects',
     ];
     const updates = {};
@@ -22,27 +25,10 @@ export const updateProfile = async (req, res) => {
       }
     });
 
-    if (updates.healthSpecialty || updates.yearsOfExperience !== undefined) {
+    if (updates.healthSpecialty || updates.yearsOfExperience !== undefined || updates.skills) {
       const user = await User.findByPk(req.userId);
       const merged = { ...user.toJSON(), ...updates };
       updates.innovationScore = calculateInnovationScore(merged);
-    }
-
-    if (req.body.preferences) {
-      const { ageRange, maxDistance, genderPreference } = req.body.preferences;
-      if (ageRange?.min) updates.ageRangeMin = ageRange.min;
-      if (ageRange?.max) updates.ageRangeMax = ageRange.max;
-      if (maxDistance) updates.maxDistance = maxDistance;
-      if (genderPreference) updates.genderPreference = genderPreference;
-    }
-
-    if (req.body.location) {
-      if (req.body.location.coordinates) {
-        updates.locationLng = req.body.location.coordinates[0];
-        updates.locationLat = req.body.location.coordinates[1];
-      }
-      if (req.body.location.city) updates.locationCity = req.body.location.city;
-      if (req.body.location.country) updates.locationCountry = req.body.location.country;
     }
 
     const [affected] = await User.update(updates, { where: { id: req.userId } });
@@ -115,7 +101,7 @@ export const deletePhoto = async (req, res) => {
   try {
     const { photoId } = req.params;
     const user = await User.findByPk(req.userId);
-    const photos = (user.photos || []).filter(p => p._id !== photoId && p.id !== photoId);
+    const photos = (user.photos || []).filter(p => p.id !== photoId);
     await User.update({ photos }, { where: { id: req.userId } });
     res.json(photos);
   } catch (error) {
@@ -131,7 +117,7 @@ export const setPrimaryPhoto = async (req, res) => {
 
     const photos = (user.photos || []).map(p => ({
       ...p,
-      isPrimary: (p._id || p.id) === photoId,
+      isPrimary: p.id === photoId,
     }));
 
     await User.update({ photos }, { where: { id: req.userId } });
@@ -143,13 +129,12 @@ export const setPrimaryPhoto = async (req, res) => {
 
 export const updatePreferences = async (req, res) => {
   try {
-    const { ageRange, maxDistance, genderPreference } = req.body;
+    const { ageRange, maxDistance } = req.body;
     await User.update(
       {
         ageRangeMin: ageRange?.min ?? undefined,
         ageRangeMax: ageRange?.max ?? undefined,
         maxDistance: maxDistance ?? undefined,
-        genderPreference: genderPreference ?? undefined,
       },
       { where: { id: req.userId } }
     );
@@ -157,7 +142,6 @@ export const updatePreferences = async (req, res) => {
     res.json({
       ageRange: { min: user.ageRangeMin, max: user.ageRangeMax },
       maxDistance: user.maxDistance,
-      genderPreference: user.genderPreference,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -200,9 +184,6 @@ export const completeOnboarding = async (req, res) => {
 
 export const getNearbyUsers = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId);
-    const { maxDistance = 50 } = req.query;
-
     const nearby = await User.findAll({
       where: {
         id: { [Op.ne]: req.userId },

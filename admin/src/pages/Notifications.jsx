@@ -9,8 +9,8 @@ export default function Notifications() {
   const [form, setForm] = useState({
     title: '', body: '', type: 'custom',
     targetAudience: {
-      gender: [], ageRange: { min: 18, max: 60 },
-      subscriptionTier: [], interests: [], isVerified: undefined,
+      skills: [], experienceRange: { min: 0, max: 30 },
+      subscriptionTier: [], industries: [], isVerified: undefined,
       location: { city: '', country: '' },
     },
     schedule: { sendAt: '', frequency: 'once' },
@@ -38,7 +38,7 @@ export default function Notifications() {
       loadCampaigns();
       setForm({
         title: '', body: '', type: 'custom',
-        targetAudience: { gender: [], ageRange: { min: 18, max: 60 }, subscriptionTier: [], interests: [], isVerified: undefined, location: { city: '', country: '' } },
+        targetAudience: { skills: [], experienceRange: { min: 0, max: 30 }, subscriptionTier: [], industries: [], isVerified: undefined, location: { city: '', country: '' } },
         schedule: { sendAt: '', frequency: 'once' },
       });
     } catch (err) {
@@ -82,7 +82,7 @@ export default function Notifications() {
               </thead>
               <tbody>
                 {campaigns.map(c => (
-                  <tr key={c._id}>
+                  <tr key={c.id}>
                     <td>{c.title}</td>
                     <td><span className="badge badge-info">{c.type}</span></td>
                     <td><span className={`badge ${c.status === 'sent' ? 'badge-success' : c.status === 'scheduled' ? 'badge-warning' : c.status === 'draft' ? 'badge-info' : ''}`}>{c.status}</span></td>
@@ -91,7 +91,7 @@ export default function Notifications() {
                     <td>{new Date(c.createdAt).toLocaleDateString()}</td>
                     <td>
                       {c.status === 'draft' && (
-                        <button className="btn btn-primary btn-sm" onClick={() => sendCampaign(c._id)}>Send</button>
+                        <button className="btn btn-primary btn-sm" onClick={() => sendCampaign(c.id)}>Send</button>
                       )}
                     </td>
                   </tr>

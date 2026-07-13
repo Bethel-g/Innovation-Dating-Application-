@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "node src/start.js",
     "dev:watch": "nodemon src/start.js",
-    "start": "node src/server.js",
+    "start": "node src/start.js",
     "seed": "node src/start.js --seed"
   },
   "dependencies": {

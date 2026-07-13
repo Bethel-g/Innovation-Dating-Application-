@@ -73,16 +73,16 @@ export default function Moderation() {
                 </thead>
                 <tbody>
                   {reports.map(r => (
-                    <tr key={r._id}>
+                    <tr key={r.id}>
                       <td>{r.reporter?.name || 'Unknown'}</td>
                       <td>{r.reported?.name || 'Unknown'}</td>
                       <td><span className="badge badge-warning">{r.reason}</span></td>
                       <td>{new Date(r.createdAt).toLocaleDateString()}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => resolveReport(r._id, 'resolved', 'warn')}>Warn</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => resolveReport(r._id, 'resolved', 'ban')}>Ban</button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => resolveReport(r._id, 'dismissed', 'none')}>Dismiss</button>
+                          <button className="btn btn-primary btn-sm" onClick={() => resolveReport(r.id, 'resolved', 'warn')}>Warn</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => resolveReport(r.id, 'resolved', 'ban')}>Ban</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => resolveReport(r.id, 'dismissed', 'none')}>Dismiss</button>
                         </div>
                       </td>
                     </tr>
@@ -104,15 +104,15 @@ export default function Moderation() {
                 </thead>
                 <tbody>
                   {messages.map(m => (
-                    <tr key={m._id}>
+                    <tr key={m.id}>
                       <td>{m.sender?.name || 'Unknown'}</td>
                       <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.content}</td>
                       <td><span className="badge badge-warning">{m.flagReason}</span></td>
                       <td>{new Date(m.createdAt).toLocaleDateString()}</td>
                       <td>
                         <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-primary btn-sm" onClick={() => moderateMessage(m._id, 'approve')}>Approve</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => moderateMessage(m._id, 'delete')}>Delete</button>
+                          <button className="btn btn-primary btn-sm" onClick={() => moderateMessage(m.id, 'approve')}>Approve</button>
+                          <button className="btn btn-danger btn-sm" onClick={() => moderateMessage(m.id, 'delete')}>Delete</button>
                         </div>
                       </td>
                     </tr>

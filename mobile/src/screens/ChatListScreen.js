@@ -29,13 +29,13 @@ export default function ChatListScreen() {
   };
 
   if (loading) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color="#e94057" /></View>;
+    return <View style={styles.loading}><ActivityIndicator size="large" color="#EF4444" /></View>;
   }
 
   const renderItem = ({ item }) => {
     const otherUser = item.otherUser;
     return (
-      <TouchableOpacity style={styles.conversation} onPress={() => navigation.navigate('Chat', { matchId: item.match._id, otherUser })}>
+      <TouchableOpacity style={styles.conversation} onPress={() => navigation.navigate('Chat', { matchId: item.match.id, otherUser })}>
         <View style={styles.avatar}>
           {otherUser?.photos?.[0]?.url ? (
             <Image source={{ uri: otherUser.photos[0].url }} style={styles.avatarImage} />
@@ -64,10 +64,10 @@ export default function ChatListScreen() {
       {conversations.length === 0 ? (
         <View style={styles.empty}>
           <Text style={styles.emptyTitle}>No conversations</Text>
-          <Text style={styles.emptySub}>Match with someone to start chatting!</Text>
+          <Text style={styles.emptySub}>Connect with someone to start chatting!</Text>
         </View>
       ) : (
-        <FlatList data={conversations} renderItem={renderItem} keyExtractor={item => item.match._id} />
+        <FlatList data={conversations} renderItem={renderItem} keyExtractor={item => item.match.id} />
       )}
     </View>
   );
@@ -81,12 +81,12 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '600', marginBottom: 4 },
   emptySub: { color: '#636e72' },
   conversation: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', marginHorizontal: 16, marginVertical: 4, borderRadius: 12 },
-  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#e94057', justifyContent: 'center', alignItems: 'center', marginRight: 14, overflow: 'hidden' },
+  avatar: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center', marginRight: 14, overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { color: '#fff', fontSize: 20, fontWeight: '700' },
   info: { flex: 1 },
   name: { fontSize: 16, fontWeight: '600' },
   lastMessage: { color: '#636e72', fontSize: 14, marginTop: 2 },
-  unread: { backgroundColor: '#e94057', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
+  unread: { backgroundColor: '#EF4444', borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
   unreadText: { color: '#fff', fontSize: 12, fontWeight: '700' },
 });

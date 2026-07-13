@@ -124,4 +124,27 @@ export const communityAPI = {
   leave: (id) => api.post(`/communities/${id}/leave`),
 };
 
+export const ideasAPI = {
+  create: (data) => api.post('/ideas', data),
+  getAll: (params) => api.get('/ideas', { params }),
+  getById: (id) => api.get(`/ideas/${id}`),
+  join: (id, data) => api.post(`/ideas/${id}/join`, data),
+  update: (id, data) => api.put(`/ideas/${id}`, data),
+  addComment: (id, data) => api.post(`/ideas/${id}/comments`, data),
+};
+
+export const mentorsAPI = {
+  getAll: (params) => api.get('/mentors', { params }),
+  getById: (id) => api.get(`/mentors/${id}`),
+  bookSession: (data) => api.post('/mentors/book', data),
+  getSessions: () => api.get('/mentors/sessions'),
+};
+
+export const skillsAPI = {
+  endorse: (userId, skill) => api.post(`/skills/endorse/${userId}`, { skill }),
+  getEndorsements: (userId) => api.get(`/skills/endorsements/${userId}`),
+  addSkill: (data) => api.post('/skills', data),
+  removeSkill: (skill) => api.delete(`/skills/${skill}`),
+};
+
 export default api;

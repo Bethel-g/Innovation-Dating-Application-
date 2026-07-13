@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
 import NotificationCampaign from '../models/NotificationCampaign.js';
 import User from '../models/User.js';
+import { jsonbContains } from '../utils/jsonContains.js';
 
 export const createNotification = async ({ user, type, title, body, data = {} }) => {
   try {
@@ -79,7 +80,9 @@ export const processCampaign = async (campaignId) => {
 
   if (targetAudience?.gender?.length) where.gender = { [Op.in]: targetAudience.gender };
   if (targetAudience?.subscriptionTier?.length) where.subscriptionTier = { [Op.in]: targetAudience.subscriptionTier };
-  if (targetAudience?.interests?.length) where.interests = { [Op.overlap]: targetAudience.interests };
+  if (targetAudience?.interests?.length) {
+    where[Op.or] = targetAudience.interests.map(i => jsonbContains('interests', i));
+  }
   if (targetAudience?.isVerified !== undefined) where.isVerified = targetAudience.isVerified;
   if (targetAudience?.location?.city) where.locationCity = targetAudience.location.city;
   if (targetAudience?.ageRange) {

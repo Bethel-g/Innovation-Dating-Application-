@@ -36,7 +36,7 @@ export default function Matches() {
     try {
       const res = await matchAPI.swipe({ targetUserId, action });
       if (res.data.isMatch) {
-        toast.success("It's a match! 🎉");
+        toast.success('New connection established! 🎉');
       }
       setPotential(prev => prev.filter((_, i) => i !== currentIndex));
       setCurrentIndex(prev => Math.min(prev, potential.length - 2));
@@ -53,7 +53,7 @@ export default function Matches() {
     <div className="matches-page page-transition">
       <div className="tabs">
         <button className={`tab ${activeTab === 'discover' ? 'active' : ''}`} onClick={() => setActiveTab('discover')}>Discover</button>
-        <button className={`tab ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>Matches ({myMatches.length})</button>
+        <button className={`tab ${activeTab === 'matches' ? 'active' : ''}`} onClick={() => setActiveTab('matches')}>Connections ({myMatches.length})</button>
       </div>
 
       {activeTab === 'discover' ? (
@@ -62,21 +62,30 @@ export default function Matches() {
           {potential.length > 0 && currentIndex < potential.length ? (
             <div className="swipe-card-wrapper">
               <div className="swipe-card card" key={currentIndex}>
-                <div className="swipe-card-avatar">
+                <div className="swipe-card-header">
                   {potential[currentIndex].user.photos?.[0]?.url ? (
-                    <img src={potential[currentIndex].user.photos[0].url} alt="" />
+                    <img src={potential[currentIndex].user.photos[0].url} alt="" className="swipe-card-img" />
                   ) : (
                     <div className="avatar-placeholder">{potential[currentIndex].user.name?.[0]}</div>
                   )}
                 </div>
                 <div className="swipe-card-info">
-                  <h2>{potential[currentIndex].user.name}, {potential[currentIndex].user.dateOfBirth ? new Date().getFullYear() - new Date(potential[currentIndex].user.dateOfBirth).getFullYear() : '?'}</h2>
+                  <h2>{potential[currentIndex].user.name}</h2>
+                  {potential[currentIndex].user.headline && (
+                    <p className="swipe-headline">{potential[currentIndex].user.headline}</p>
+                  )}
+                  {potential[currentIndex].user.experienceLevel && (
+                    <p className="swipe-experience">📊 {potential[currentIndex].user.experienceLevel}</p>
+                  )}
                   <div className="compatibility-score">
-                    <span className="badge badge-success">{potential[currentIndex].compatibilityScore}% Match</span>
+                    <span className="badge badge-success">{potential[currentIndex].compatibilityScore}% Compatible</span>
                   </div>
-                  <p>{potential[currentIndex].user.bio || 'No bio yet'}</p>
-                  <div className="swipe-interests">
-                    {potential[currentIndex].user.interests?.map(i => <span key={i} className="tag tag-light">{i}</span>)}
+                  <p className="swipe-bio">{potential[currentIndex].user.bio || 'No bio yet'}</p>
+                  <div className="swipe-skills">
+                    <strong>Skills:</strong>
+                    <div className="skill-tags">
+                      {potential[currentIndex].user.skills?.map(s => <span key={s} className="tag-skill">{s}</span>)}
+                    </div>
                   </div>
                   {potential[currentIndex].insight && (
                     <div className="match-insight">
@@ -85,9 +94,9 @@ export default function Matches() {
                   )}
                 </div>
                 <div className="swipe-actions">
-                  <button className="btn swipe-btn swipe-nope" onClick={() => handleSwipe(potential[currentIndex].user._id, 'pass')}>✕</button>
-                  <button className="btn swipe-btn swipe-super" onClick={() => handleSwipe(potential[currentIndex].user._id, 'super_like')}>⭐</button>
-                  <button className="btn swipe-btn swipe-like" onClick={() => handleSwipe(potential[currentIndex].user._id, 'like')}>♥</button>
+                  <button className="btn swipe-btn swipe-nope" onClick={() => handleSwipe(potential[currentIndex].user.id, 'pass')}>Skip</button>
+                  <button className="btn swipe-btn swipe-super" onClick={() => handleSwipe(potential[currentIndex].user.id, 'super_like')}>⭐ Super</button>
+                  <button className="btn swipe-btn swipe-like" onClick={() => handleSwipe(potential[currentIndex].user.id, 'like')}>Connect</button>
                 </div>
               </div>
             </div>
@@ -104,9 +113,9 @@ export default function Matches() {
           {myMatches.length > 0 ? (
             <div className="grid grid-2">
               {myMatches.map(match => {
-                const otherUser = match.users.find(u => u._id !== JSON.parse(localStorage.getItem('user') || '{}')._id);
+                const otherUser = match.users.find(u => u.id !== JSON.parse(localStorage.getItem('user') || '{}').id);
                 return (
-                  <Link to={`/chat/${match._id}`} key={match._id} className="match-card card">
+                  <Link to={`/chat/${match.id}`} key={match.id} className="match-card card">
                     <div className="match-card-avatar">
                       {otherUser?.photos?.[0]?.url ? (
                         <img src={otherUser.photos[0].url} alt="" />
@@ -116,7 +125,10 @@ export default function Matches() {
                     </div>
                     <div className="match-card-info">
                       <h3>{otherUser?.name}</h3>
-                      <p className="match-card-bio">{otherUser?.bio?.substring(0, 60) || 'No bio'}</p>
+                      {otherUser?.headline && <p className="match-card-headline">{otherUser.headline}</p>}
+                      <div className="match-card-skills">
+                        {otherUser?.skills?.slice(0, 3).map(s => <span key={s} className="tag-skill">{s}</span>)}
+                      </div>
                     </div>
                     <div className="match-card-action">
                       <span className="text-arrow">→</span>
@@ -127,8 +139,8 @@ export default function Matches() {
             </div>
           ) : (
             <div className="empty-state">
-              <h3>No matches yet</h3>
-              <p>Start discovering people to find your match!</p>
+              <h3>No connections yet</h3>
+              <p>Start discovering professionals to build your network!</p>
             </div>
           )}
         </div>
@@ -141,31 +153,36 @@ export default function Matches() {
         .tab.active { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
         .swipe-count { text-align: center; color: var(--text-light); margin-bottom: 12px; font-size: 14px; }
         .swipe-card-wrapper { display: flex; justify-content: center; }
-        .swipe-card { width: 100%; max-width: 400px; padding: 0; overflow: hidden; }
-        .swipe-card-avatar { width: 100%; height: 300px; overflow: hidden; }
-        .swipe-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .swipe-card { width: 100%; max-width: 420px; padding: 0; overflow: hidden; }
+        .swipe-card-header { width: 100%; height: 280px; overflow: hidden; }
+        .swipe-card-img { width: 100%; height: 100%; object-fit: cover; }
         .avatar-placeholder { width: 100%; height: 100%; background: linear-gradient(135deg, var(--primary), var(--secondary)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 48px; }
         .swipe-card-info { padding: 20px; }
         .swipe-card-info h2 { font-size: 24px; margin-bottom: 4px; }
+        .swipe-headline { color: var(--primary); font-weight: 500; font-size: 15px; }
+        .swipe-experience { color: var(--text-light); font-size: 14px; margin: 4px 0; }
         .compatibility-score { margin-bottom: 12px; }
-        .swipe-interests { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-        .match-insight { margin-top: 12px; padding: 12px; background: rgba(233,64,87,0.05); border-radius: var(--radius-sm); }
+        .swipe-bio { color: var(--text-light); font-size: 14px; margin: 8px 0; }
+        .swipe-skills { margin: 12px 0; }
+        .swipe-skills strong { display: block; font-size: 14px; margin-bottom: 4px; }
+        .match-insight { margin-top: 12px; padding: 12px; background: rgba(74,108,247,0.05); border-radius: var(--radius-sm); }
         .insight-text { font-size: 14px; color: var(--text-light); }
-        .swipe-actions { display: flex; justify-content: center; gap: 20px; padding: 16px 20px 24px; }
-        .swipe-btn { width: 56px; height: 56px; border-radius: 50%; font-size: 24px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .swipe-actions { display: flex; justify-content: center; gap: 16px; padding: 16px 20px 24px; }
+        .swipe-btn { padding: 12px 24px; border-radius: 24px; font-size: 15px; font-weight: 600; transition: all 0.2s; }
         .swipe-nope { background: #f0f0f0; color: var(--danger); }
         .swipe-nope:hover { background: var(--danger); color: #fff; }
         .swipe-super { background: #f0f0f0; color: #3498db; }
         .swipe-super:hover { background: #3498db; color: #fff; }
-        .swipe-like { background: #f0f0f0; color: var(--primary); }
-        .swipe-like:hover { background: var(--primary); color: #fff; }
+        .swipe-like { background: linear-gradient(135deg, var(--primary), var(--secondary)); color: #fff; }
+        .swipe-like:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(74,108,247,0.4); }
         .match-card { display: flex; align-items: center; gap: 16px; padding: 16px; transition: all 0.2s; }
         .match-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
         .match-card-avatar { width: 60px; height: 60px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
         .match-card-avatar img { width: 100%; height: 100%; object-fit: cover; }
         .match-card-info { flex: 1; }
         .match-card-info h3 { font-size: 16px; }
-        .match-card-bio { color: var(--text-light); font-size: 14px; }
+        .match-card-headline { color: var(--text-light); font-size: 13px; }
+        .match-card-skills { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
         .match-card-action .text-arrow { font-size: 20px; color: var(--text-light); }
       `}</style>
     </div>

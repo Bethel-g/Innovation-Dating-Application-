@@ -29,8 +29,8 @@ export default function LoginScreen({ navigation }) {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.content}>
-        <Text style={styles.title}>HeartSync</Text>
-        <Text style={styles.subtitle}>Find Your Perfect Match</Text>
+        <Text style={styles.title}>Innovation Dating</Text>
+        <Text style={styles.subtitle}>Connect with Top Professionals</Text>
 
         <TextInput
           style={styles.input}
@@ -63,18 +63,18 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#faf0ff' },
+  container: { flex: 1, backgroundColor: '#f0f2ff' },
   content: { flex: 1, justifyContent: 'center', paddingHorizontal: 32 },
-  title: { fontSize: 36, fontWeight: '800', textAlign: 'center', color: '#e94057', marginBottom: 4 },
+  title: { fontSize: 36, fontWeight: '800', textAlign: 'center', color: '#EF4444', marginBottom: 4 },
   subtitle: { fontSize: 16, textAlign: 'center', color: '#636e72', marginBottom: 40 },
   input: {
     backgroundColor: '#fff', borderRadius: 12, padding: 16, fontSize: 16,
     marginBottom: 16, borderWidth: 2, borderColor: '#e0e0e0',
   },
   button: {
-    backgroundColor: '#e94057', borderRadius: 12, padding: 16, alignItems: 'center',
+    backgroundColor: '#EF4444', borderRadius: 12, padding: 16, alignItems: 'center',
     marginBottom: 16, marginTop: 8,
   },
   buttonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  link: { textAlign: 'center', color: '#e94057', fontWeight: '600', marginTop: 16 },
+  link: { textAlign: 'center', color: '#EF4444', fontWeight: '600', marginTop: 16 },
 });

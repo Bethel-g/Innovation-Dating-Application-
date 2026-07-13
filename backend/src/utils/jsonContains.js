@@ -1,4 +1,4 @@
-import { literal, where as seqWhere, cast, col } from 'sequelize';
+import { literal } from 'sequelize';
 
 const jsonbContains = (column, value) => {
   const val = Array.isArray(value) ? JSON.stringify(value) : JSON.stringify([value]);

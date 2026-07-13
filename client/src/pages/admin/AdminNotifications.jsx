@@ -53,12 +53,12 @@ export default function AdminNotifications() {
         {loading ? <div className="empty-state"><div className="spinner" /></div> : campaigns.length === 0
           ? <div className="empty-state"><h3>No campaigns</h3></div>
           : <div className="table-wrapper"><table><thead><tr><th>Title</th><th>Type</th><th>Status</th><th>Sent</th><th>Actions</th></tr></thead><tbody>
-            {campaigns.map(c => <tr key={c._id}>
+            {campaigns.map(c => <tr key={c.id}>
               <td>{c.title}</td>
               <td><span className="badge badge-info">{c.type}</span></td>
               <td><span className={`badge ${c.status === 'sent' ? 'badge-success' : c.status === 'scheduled' ? 'badge-warning' : 'badge-info'}`}>{c.status}</span></td>
               <td>{c.sentCount}</td>
-              <td>{c.status === 'draft' && <button className="btn btn-primary btn-sm" onClick={() => sendCampaign(c._id)}>Send</button>}</td>
+              <td>{c.status === 'draft' && <button className="btn btn-primary btn-sm" onClick={() => sendCampaign(c.id)}>Send</button>}</td>
             </tr>)}
           </tbody></table></div>}
       </div>

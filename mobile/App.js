@@ -17,12 +17,19 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const COLORS = {
+  primary: '#EF4444',
+  secondary: '#F97316',
+  inactive: '#999',
+  bg: '#f5f5f5',
+};
+
 function MainTabs() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#e94057',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.inactive,
         tabBarStyle: { paddingBottom: 8, paddingTop: 8, height: 60 },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         headerShown: false,
@@ -31,17 +38,17 @@ function MainTabs() {
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{ tabBarLabel: 'Discover', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>🔥</Text> }}
+        options={{ tabBarLabel: 'Discover', tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>✦</Text> }}
       />
       <Tab.Screen
         name="ChatList"
         component={ChatListScreen}
-        options={{ tabBarLabel: 'Chat', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>💬</Text> }}
+        options={{ tabBarLabel: 'Chat', tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>◆</Text> }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ tabBarLabel: 'Profile', tabBarIcon: ({ color }) => <Text style={{ fontSize: 22 }}>👤</Text> }}
+        options={{ tabBarLabel: 'Profile', tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>●</Text> }}
       />
     </Tab.Navigator>
   );
@@ -53,7 +60,7 @@ function AppContent() {
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-        <ActivityIndicator size="large" color="#e94057" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }

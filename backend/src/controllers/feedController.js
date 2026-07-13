@@ -5,6 +5,7 @@ import Like from '../models/Like.js';
 import Follow from '../models/Follow.js';
 import { jsonbContains } from '../utils/jsonContains.js';
 import User from '../models/User.js';
+import { HEALTH_SPECIALTIES, INNOVATION_FOCUS } from '../config/constants.js';
 
 export const createPost = async (req, res) => {
   try {
@@ -28,7 +29,7 @@ export const getFeed = async (req, res) => {
     followingIds.push(req.userId);
 
     const posts = await Post.findAll({
-      where: { author: { [Op.in]: followingIds }, isDraft: false },
+      where: { author: followingIds, isDraft: false },
       order: [['createdAt', 'DESC']],
       offset: parseInt(offset),
       limit: parseInt(limit),
@@ -37,7 +38,7 @@ export const getFeed = async (req, res) => {
     const authorIds = [...new Set(posts.map(p => p.author))];
     const authors = await User.findAll({
       where: { id: authorIds },
-      attributes: ['id', 'name', 'photos', 'healthSpecialty', 'innovationFocus'],
+      attributes: ['id', 'name', 'headline', 'photos', 'healthSpecialty', 'innovationFocus'],
     });
     const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
 
@@ -51,7 +52,7 @@ export const getFeed = async (req, res) => {
       isLikedByMe: likedIds.has(p.id),
     }));
 
-    const total = await Post.count({ where: { author: { [Op.in]: followingIds }, isDraft: false } });
+    const total = await Post.count({ where: { author: followingIds, isDraft: false } });
 
     res.json({ posts: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
   } catch (error) {
@@ -65,17 +66,31 @@ export const getExploreFeed = async (req, res) => {
     const offset = (page - 1) * limit;
 
     const userFilter = { isActive: true };
-    if (specialty) userFilter.healthSpecialty = specialty;
-    if (focus) userFilter.innovationFocus = focus;
+    if (specialty) {
+      if (!HEALTH_SPECIALTIES.includes(specialty)) {
+        return res.json({ posts: [], total: 0, page: parseInt(page), totalPages: 0 });
+      }
+      userFilter.healthSpecialty = specialty;
+    }
+    if (focus) {
+      if (!INNOVATION_FOCUS.includes(focus)) {
+        return res.json({ posts: [], total: 0, page: parseInt(page), totalPages: 0 });
+      }
+      userFilter.innovationFocus = focus;
+    }
 
     const users = await User.findAll({ where: userFilter, attributes: ['id'] });
     const userIds = users.map(u => u.id);
+    if (userIds.length === 0) {
+      return res.json({ posts: [], total: 0, page: parseInt(page), totalPages: 0 });
+    }
 
     const conditions = [{ author: { [Op.in]: userIds }, isDraft: false }];
     if (req.query.tag) conditions.push(jsonbContains('hashtags', req.query.tag));
+    const postWhere = { [Op.and]: conditions };
 
     const posts = await Post.findAll({
-      where: { [Op.and]: conditions },
+      where: postWhere,
       order: [['createdAt', 'DESC']],
       offset,
       limit: parseInt(limit),
@@ -84,7 +99,7 @@ export const getExploreFeed = async (req, res) => {
     const authorIds = [...new Set(posts.map(p => p.author))];
     const authors = await User.findAll({
       where: { id: authorIds },
-      attributes: ['id', 'name', 'photos', 'healthSpecialty', 'innovationFocus'],
+      attributes: ['id', 'name', 'headline', 'photos', 'healthSpecialty', 'innovationFocus'],
     });
     const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
 
@@ -98,7 +113,7 @@ export const getExploreFeed = async (req, res) => {
       isLikedByMe: likedIds.has(p.id),
     }));
 
-    const total = await Post.count({ where });
+    const total = await Post.count({ where: postWhere });
 
     res.json({ posts: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
   } catch (error) {

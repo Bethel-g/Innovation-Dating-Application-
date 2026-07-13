@@ -5,6 +5,11 @@ import {
   updateUser, deleteUser, getReports, resolveReport,
   getFlaggedMessages, moderateMessage, getAnalytics,
   getCampaigns, createCampaign, sendCampaign,
+  getPosts, deletePost,
+  getComments, updateComment, deleteComment,
+  getCommunities, updateCommunity, deleteCommunity,
+  getProjects, updateProject, deleteProject,
+  getRoles, updateUserRole,
 } from '../controllers/adminController.js';
 import { authenticateUser, requireAdmin, requireRole, requirePermission } from '../middleware/auth.js';
 import User from '../models/User.js';
@@ -57,5 +62,27 @@ router.put('/messages/:id/moderate', requirePermission('contentModeration'), mod
 router.get('/campaigns', requirePermission('notificationManagement'), getCampaigns);
 router.post('/campaigns', requirePermission('notificationManagement'), createCampaign);
 router.post('/campaigns/:id/send', requirePermission('notificationManagement'), sendCampaign);
+
+/* Social Media Management */
+router.get('/posts', requirePermission('socialMediaModeration'), getPosts);
+router.delete('/posts/:id', requirePermission('socialMediaModeration'), deletePost);
+
+router.get('/comments', requirePermission('socialMediaModeration'), getComments);
+router.put('/comments/:id', requirePermission('socialMediaModeration'), updateComment);
+router.delete('/comments/:id', requirePermission('socialMediaModeration'), deleteComment);
+
+/* Community Management */
+router.get('/communities', requirePermission('communityManagement'), getCommunities);
+router.put('/communities/:id', requirePermission('communityManagement'), updateCommunity);
+router.delete('/communities/:id', requirePermission('communityManagement'), deleteCommunity);
+
+/* Project Management */
+router.get('/projects', requirePermission('projectManagement'), getProjects);
+router.put('/projects/:id', requirePermission('projectManagement'), updateProject);
+router.delete('/projects/:id', requirePermission('projectManagement'), deleteProject);
+
+/* Role & Permission Management */
+router.get('/roles', requirePermission('userManagement'), getRoles);
+router.put('/users/:id/role', requirePermission('userManagement'), updateUserRole);
 
 export default router;

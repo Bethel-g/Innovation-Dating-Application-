@@ -58,13 +58,13 @@ export default function AdminModeration() {
         <div className="card">{
           reports.length === 0 ? <div className="empty-state"><h3>No pending reports</h3></div>
           : <div className="table-wrapper"><table><thead><tr><th>Reporter</th><th>Reported</th><th>Reason</th><th>Actions</th></tr></thead><tbody>
-            {reports.map(r => <tr key={r._id}>
+            {reports.map(r => <tr key={r.id}>
               <td>{r.reporter?.name}</td><td>{r.reported?.name}</td>
               <td><span className="badge badge-warning">{r.reason}</span></td>
               <td><div style={{ display: 'flex', gap: 4 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => resolveReport(r._id, 'resolved', 'warn')}>Warn</button>
-                <button className="btn btn-danger btn-sm" onClick={() => resolveReport(r._id, 'resolved', 'ban')}>Ban</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => resolveReport(r._id, 'dismissed', 'none')}>Dismiss</button>
+                <button className="btn btn-primary btn-sm" onClick={() => resolveReport(r.id, 'resolved', 'warn')}>Warn</button>
+                <button className="btn btn-danger btn-sm" onClick={() => resolveReport(r.id, 'resolved', 'ban')}>Ban</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => resolveReport(r.id, 'dismissed', 'none')}>Dismiss</button>
               </div></td>
             </tr>)}
           </tbody></table></div>
@@ -73,12 +73,12 @@ export default function AdminModeration() {
         <div className="card">{
           messages.length === 0 ? <div className="empty-state"><h3>No flagged messages</h3></div>
           : <div className="table-wrapper"><table><thead><tr><th>Sender</th><th>Content</th><th>Reason</th><th>Actions</th></tr></thead><tbody>
-            {messages.map(m => <tr key={m._id}>
+            {messages.map(m => <tr key={m.id}>
               <td>{m.sender?.name}</td><td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.content}</td>
               <td><span className="badge badge-warning">{m.flagReason}</span></td>
               <td><div style={{ display: 'flex', gap: 4 }}>
-                <button className="btn btn-primary btn-sm" onClick={() => moderateMessage(m._id, 'approve')}>Approve</button>
-                <button className="btn btn-danger btn-sm" onClick={() => moderateMessage(m._id, 'delete')}>Delete</button>
+                <button className="btn btn-primary btn-sm" onClick={() => moderateMessage(m.id, 'approve')}>Approve</button>
+                <button className="btn btn-danger btn-sm" onClick={() => moderateMessage(m.id, 'delete')}>Delete</button>
               </div></td>
             </tr>)}
           </tbody></table></div>

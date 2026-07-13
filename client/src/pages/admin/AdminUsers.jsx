@@ -45,13 +45,13 @@ export default function AdminUsers() {
         {loading ? <div className="empty-state"><div className="spinner" /></div>
           : users.length === 0 ? <div className="empty-state"><h3>No users found</h3></div>
           : <div className="table-wrapper"><table><thead><tr><th>User</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead><tbody>
-            {users.map(u => <tr key={u._id}>
+            {users.map(u => <tr key={u.id}>
               <td><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><div className="avatar-sm">{u.name?.[0]}</div>{u.name}</div></td>
               <td>{u.email}</td>
               <td><span className="badge badge-info">{u.role}</span></td>
               <td><span className={`badge ${u.isActive ? 'badge-success' : 'badge-danger'}`}>{u.isActive ? 'Active' : 'Inactive'}</span></td>
               <td>{new Date(u.createdAt).toLocaleDateString()}</td>
-              <td><button className="btn btn-danger btn-sm" onClick={() => deactivateUser(u._id)}>Deactivate</button></td>
+              <td><button className="btn btn-danger btn-sm" onClick={() => deactivateUser(u.id)}>Deactivate</button></td>
             </tr>)}
           </tbody></table></div>}
         {totalPages > 1 && <div className="pagination">
