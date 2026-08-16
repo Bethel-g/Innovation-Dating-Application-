@@ -147,4 +147,33 @@ export const skillsAPI = {
   removeSkill: (skill) => api.delete(`/skills/${skill}`),
 };
 
+export const adminAPI = {
+  getDashboardStats: () => api.get('/admin/dashboard'),
+  getUsers: (params) => api.get('/admin/users', { params }),
+  getUser: (id) => api.get(`/admin/users/${id}`),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  getUserRole: (id) => api.get(`/admin/users/${id}/role`),
+  updateUserRole: (id, data) => api.put(`/admin/users/${id}/role`, data),
+  getRoles: () => api.get('/admin/roles'),
+  getPosts: (params) => api.get('/admin/posts', { params }),
+  deletePost: (id) => api.delete(`/admin/posts/${id}`),
+  getComments: (params) => api.get('/admin/comments', { params }),
+  deleteComment: (id) => api.delete(`/admin/comments/${id}`),
+  getCommunities: (params) => api.get('/admin/communities', { params }),
+  getProjects: (params) => api.get('/admin/projects', { params }),
+  getAnalytics: () => api.get('/admin/analytics'),
+  getNotifications: (params) => api.get('/admin/notifications', { params }),
+  getModeration: (params) => api.get('/admin/moderation', { params }),
+  getSuggestions: (params) => api.get('/admin/suggestions', { params }),
+  createNotification: (data) => api.post('/admin/notifications', data),
+  getNotificationsCampaigns: () => api.get('/admin/notifications/campaigns'),
+};
+
+export const adminAuthAPI = {
+  login: (data) => api.post('/admin/login', data),
+  getMe: () => api.get('/admin/me'),
+  logout: () => api.post('/admin/logout'),
+};
+
 export default api;

@@ -25,6 +25,15 @@ import './models/Project.js';
 import './models/ProjectMember.js';
 import './models/Community.js';
 import './models/CommunityMember.js';
+import './models/Task.js';
+import './models/Idea.js';
+import './models/Badge.js';
+import './models/Contribution.js';
+import './models/Endorsement.js';
+import './models/Review.js';
+import './models/GroupMessage.js';
+import './models/ActivityLog.js';
+import './models/SharedFile.js';
 
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -37,6 +46,10 @@ import feedRoutes from './routes/feed.js';
 import User from './models/User.js';
 import projectRoutes from './routes/projects.js';
 import communityRoutes from './routes/communities.js';
+import taskRoutes from './routes/tasks.js';
+import ideaRoutes from './routes/ideas.js';
+import reputationRoutes from './routes/reputation.js';
+import groupRoutes from './routes/groups.js';
 
 dotenv.config();
 
@@ -79,6 +92,10 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/feed', feedRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/communities', communityRoutes);
+app.use('/api/tasks', taskRoutes);
+app.use('/api/ideas', ideaRoutes);
+app.use('/api/reputation', reputationRoutes);
+app.use('/api/groups', groupRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

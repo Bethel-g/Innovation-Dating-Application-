@@ -56,7 +56,7 @@ export default function Login() {
     <div className="auth-page page-transition">
       <div className="auth-card card">
         <div className="auth-badge">Secure access</div>
-        <h1>Welcome back to HeartSync</h1>
+        <h1>Welcome back to HeartSync innovation</h1>
         <p className="auth-subtitle">Sign in to continue building meaningful connections in a trusted community.</p>
         <div className="demo-pill">Demo user: sarah@example.com / password123</div>
         <form onSubmit={handleSubmit}>

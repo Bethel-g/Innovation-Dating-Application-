@@ -98,24 +98,48 @@ export const getMatches = async (req, res) => {
 export const getPotentialMatches = async (req, res) => {
   try {
     const matches = await findPotentialMatches(req.userId);
-    const results = await Promise.all(
-      matches.map(async ({ user, compatibilityScore }) => {
-        const currentUser = await User.findByPk(req.userId);
-        const insight = generateMatchInsight(currentUser, user, compatibilityScore);
-        return { user, compatibilityScore, insight };
-      })
-    );
+    
+    // Build a complete data structure with proper aggregation
+    const currentUser = await User.findByPk(req.userId);
+    const enrichedMatches = [];
+    
+    for (const match of matches) {
+      // Get aggregated data from the matching service
+      const enhancedUser = {
+        ...match.user.toJSON(),
+        // Ensure critical fields are properly set
+        profileCompleteness: match.user.profileCompleteness || 0,
+        reputationScore: match.user.reputationScore || 0,
+        innovationScore: match.user.innovationScore || 0,
+        intents: match.user.intents || [],
+        skills: match.user.skills || [],
+        primarySkills: match.user.primarySkills || [],
+        secondarySkills: match.user.secondarySkills || [],
+        interests: match.user.interests || [],
+        // Add age and location for better matching
+        calculatedAge: currentUser.dateOfBirth ? Math.floor((new Date() - new Date(currentUser.dateOfBirth)) / (365.25 * 24 * 60 * 60 * 1000)) : 25,
+      };
+      
+      const insight = generateMatchInsight(currentUser, enhancedUser, match.compatibilityScore);
+      enrichedMatches.push({ 
+        user: enhancedUser, 
+        compatibilityScore: match.compatibilityScore, 
+        insight 
+      });
+    }
 
+    // Send suggestions only for high compatibility matches
     await Promise.all(
-      results
+      enrichedMatches
         .filter(r => r.compatibilityScore > 70)
         .slice(0, 3)
         .map(r => sendSuggestionNotification(req.userId, r.user.id, r.compatibilityScore))
     );
 
-    res.json(results);
+    res.json(enrichedMatches);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error getting potential matches:', error);
+    res.status(500).json({ message: 'Failed to load matches' });
   }
 };
 
@@ -181,15 +205,7 @@ export const getSwipeCount = async (req, res) => {
       remaining: Math.max(0, user.maxDailySwipes - user.dailySwipes),
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const resetDailySwipes = async (req, res) => {
-  try {
-    await User.update({ dailySwipes: 0 }, { where: {} });
-    res.json({ message: 'Daily swipes reset' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error getting swipe count:', error);
+    res.status(500).json({ message: 'Failed to get swipe count' });
   }
 };
