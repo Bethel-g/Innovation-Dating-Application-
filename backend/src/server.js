@@ -108,6 +108,7 @@ connectDB()
   })
   .catch((err) => {
     console.warn('Warning: Database connection failed — server still running, but routes will return 503');
+    console.warn('Please verify PostgreSQL is running and that backend/.env contains the correct DATABASE_URL and password.');
   })
   .finally(() => {
     httpServer.listen(PORT, () => {

@@ -6,6 +6,9 @@ const sequelize = new Sequelize(dbUrl, {
   dialect: 'postgres',
   logging: false,
   pool: { max: 10, min: 0, acquire: 30000, idle: 10000 },
+  dialectOptions: {
+    ssl: false,
+  },
 });
 
 let dbReady = false;
@@ -19,6 +22,7 @@ const connectDB = async () => {
     dbReady = true;
   } catch (error) {
     console.error(`Database error: ${error.message}`);
+    console.error('Check that PostgreSQL is running and that the DATABASE_URL in backend/.env points to the correct database and password.');
     throw error;
   }
 };
