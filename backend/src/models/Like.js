@@ -5,7 +5,7 @@ const Like = sequelize.define('Like', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   user: { type: DataTypes.UUID, allowNull: false },
   targetType: {
-    type: DataTypes.ENUM('post', 'comment'),
+    type: DataTypes.STRING,
     allowNull: false,
   },
   targetId: { type: DataTypes.UUID, allowNull: false },

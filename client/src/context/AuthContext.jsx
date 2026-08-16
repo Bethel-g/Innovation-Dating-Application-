@@ -1,14 +1,17 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI, adminAPI, adminAuthAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const adminToken = localStorage.getItem('adminToken');
+    
     if (token) {
       authAPI.getMe()
         .then((res) => setUser(res.data))
@@ -20,6 +23,16 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    
+    if (adminToken) {
+      adminAuthAPI.getMe()
+        .then((res) => setAdmin(res.data))
+        .catch(() => {
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('admin');
+        })
+        .finally(() => setLoading(false));
+    }
   }, []);
 
   const hydrateSession = (tokenValue, userData) => {
@@ -29,9 +42,22 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const hydrateAdminSession = (tokenValue, adminData) => {
+    if (tokenValue) localStorage.setItem('adminToken', tokenValue);
+    if (adminData) localStorage.setItem('admin', JSON.stringify(adminData));
+    setAdmin(adminData || null);
+    return adminData;
+  };
+
   const login = async (email, password) => {
     const res = await authAPI.login({ email, password });
     hydrateSession(res.data.token, res.data.user);
+    return res.data;
+  };
+
+  const adminLogin = async (email, password) => {
+    const res = await adminAuthAPI.login({ email, password });
+    hydrateAdminSession(res.data.token, res.data.admin);
     return res.data;
   };
 
@@ -39,6 +65,13 @@ export const AuthProvider = ({ children }) => {
     const res = await authAPI.register(data);
     hydrateSession(res.data.token, res.data.user);
     return res.data;
+  };
+
+  const adminLogout = async () => {
+    try { await adminAuthAPI.logout(); } catch (e) { /* ignore */ }
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('admin');
+    setAdmin(null);
   };
 
   const logout = async () => {
@@ -49,7 +82,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser, hydrateSession }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      admin, 
+      loading, 
+      login, 
+      register,
+      adminLogin,
+      logout,
+      adminLogout,
+      setUser,
+      hydrateSession,
+      hydrateAdminSession
+    }}>
       {children}
     </AuthContext.Provider>
   );

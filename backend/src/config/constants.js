@@ -137,6 +137,68 @@ export const PERSONALITY_TRAITS = [
   'detail_oriented', 'big_picture', 'innovative', 'strategic', 'adaptable',
 ];
 
+export const TASK_STATUS = {
+  TODO: 'todo',
+  IN_PROGRESS: 'in_progress',
+  IN_REVIEW: 'in_review',
+  DONE: 'done',
+  BLOCKED: 'blocked',
+};
+
+export const TASK_PRIORITY = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high',
+  URGENT: 'urgent',
+};
+
+export const BADGE_TYPES = {
+  TOP_DEVELOPER: 'top_developer',
+  HEALTHCARE_EXPERT: 'healthcare_expert',
+  INNOVATOR: 'innovator',
+  COLLABORATOR: 'collaborator',
+  MENTOR: 'mentor',
+  EARLY_ADOPTER: 'early_adopter',
+  COMMUNITY_BUILDER: 'community_builder',
+  PROBLEM_SOLVER: 'problem_solver',
+  FIRST_PROJECT: 'first_project',
+  TEN_PROJECTS: 'ten_projects',
+  SKILL_MASTER: 'skill_master',
+  HELPFUL_REVIEW: 'helpful_review',
+};
+
+export const CONTRIBUTION_TYPES = {
+  PROJECT_CREATE: 'project_create',
+  PROJECT_COMPLETE: 'project_complete',
+  TASK_COMPLETE: 'task_complete',
+  REVIEW_GIVEN: 'review_given',
+  ENDORSEMENT_GIVEN: 'endorsement_given',
+  POST_CREATED: 'post_created',
+  COMMENT_ADDED: 'comment_added',
+  IDEA_SHARED: 'idea_shared',
+  COMMUNITY_JOINED: 'community_joined',
+  HELP_GIVEN: 'help_given',
+};
+
+export const CONTRIBUTION_POINTS = {
+  project_create: 50,
+  project_complete: 200,
+  task_complete: 25,
+  review_given: 10,
+  endorsement_given: 5,
+  post_created: 10,
+  comment_added: 5,
+  idea_shared: 15,
+  community_joined: 10,
+  help_given: 15,
+};
+
+export const IDEA_CATEGORIES = [
+  'healthcare', 'ai', 'fintech', 'education', 'environment',
+  'social_impact', 'gaming', 'ecommerce', 'saas', 'iot',
+  'blockchain', 'cybersecurity', 'robotics', 'other',
+];
+
 // Professional skills taxonomy
 export const PROFESSIONAL_SKILLS = {
   tech: [
