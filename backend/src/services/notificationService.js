@@ -1,8 +1,10 @@
 import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
 import NotificationCampaign from '../models/NotificationCampaign.js';
+import NotificationPreference from '../models/NotificationPreference.js';
 import User from '../models/User.js';
 import { jsonbContains } from '../utils/jsonContains.js';
+import { NOTIFICATION_CHANNEL } from '../config/constants.js';
 
 export const createNotification = async ({ user, type, title, body, data = {} }) => {
   try {
@@ -16,6 +18,28 @@ export const createNotification = async ({ user, type, title, body, data = {} })
   } catch (error) {
     console.error('Notification creation failed:', error);
   }
+};
+
+export const isChannelEnabled = async (userId, channel, eventType) => {
+  const prefs = await NotificationPreference.findAll({ where: { user: userId } });
+  if (!prefs.length) return true;
+  const match = prefs.find(p => p.channel === channel && p.eventType === eventType);
+  return match ? match.enabled : true;
+};
+
+export const dispatch = async ({ user, type, title, body, data = {}, email = null }) => {
+  const created = [];
+
+  if (await isChannelEnabled(user, NOTIFICATION_CHANNEL.IN_APP, type)) {
+    created.push(await createNotification({ user, type, title, body, data }));
+  }
+
+  if (email && await isChannelEnabled(user, NOTIFICATION_CHANNEL.EMAIL, type)) {
+    const { sendEmail } = await import('./emailService.js');
+    await sendEmail({ to: email, subject: title, text: body });
+  }
+
+  return created;
 };
 
 export const sendMatchNotification = async (user1Id, user2Id) => {

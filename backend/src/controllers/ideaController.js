@@ -2,211 +2,233 @@ import { Op } from 'sequelize';
 import Idea from '../models/Idea.js';
 import User from '../models/User.js';
 import Like from '../models/Like.js';
-import Comment from '../models/Comment.js';
-import { findPotentialMatches } from '../services/matchingService.js';
+import TeamRole from '../models/TeamRole.js';
+import Team from '../models/Team.js';
+import TeamMember from '../models/TeamMember.js';
+import Connection from '../models/Connection.js';
+import { findCollaboratorsForIdea } from '../services/matchingService.js';
 import { createNotification } from '../services/notificationService.js';
+import { sendConnectionRequest, notifyConnectionRequest } from '../services/connectionService.js';
+import { getOrCreateTeamForIdea } from '../services/teamService.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { success, created, fail, notFound } from '../utils/apiResponse.js';
+import { parsePagination, paginationMeta } from '../utils/pagination.js';
+import { IDEA_STATUS } from '../config/constants.js';
 
-export const createIdea = async (req, res) => {
-  try {
-    const idea = await Idea.create({ ...req.body, author: req.userId });
-    res.status(201).json(idea);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+const IDEA_UPDATE_FIELDS = [
+  'title', 'description', 'problemStatement', 'proposedSolution', 'desiredOutcome',
+  'category', 'sector', 'stage', 'skillsNeeded', 'rolesNeeded', 'tags',
+  'attachments', 'visibility', 'isLookingForCoFounder',
+];
 
-export const getIdeas = async (req, res) => {
-  try {
-    const { page = 1, limit = 20, status, category } = req.query;
-    const where = {};
+export const createIdea = asyncHandler(async (req, res) => {
+  const openRoles = Array.isArray(req.body.openRoles) ? req.body.openRoles : [];
+  const { openRoles: _ignored, ...payload } = req.body;
 
-    if (status) where.status = status;
-    if (category) where.category = category;
+  const idea = await Idea.create({ ...payload, author: req.userId });
 
-    const ideas = await Idea.findAll({
-      where,
-      order: [['createdAt', 'DESC']],
-      offset: (page - 1) * limit,
-      limit: parseInt(limit),
-    });
-
-    const authorIds = [...new Set(ideas.map(i => i.author))];
-    const authors = await User.findAll({
-      where: { id: authorIds },
-      attributes: ['id', 'name', 'photos', 'healthSpecialty', 'innovationFocus'],
-    });
-    const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
-
-    const enriched = ideas.map(i => ({
-      ...i.toJSON(),
-      author: authorMap[i.author] || { id: i.author },
+  const roles = [];
+  for (const role of openRoles) {
+    roles.push(await TeamRole.create({
+      idea: idea.id,
+      title: role.title,
+      roleType: role.roleType || role.type || 'other',
+      description: role.description || null,
+      skillsNeeded: role.skillsNeeded || [],
+      status: 'open',
     }));
-
-    const total = await Idea.count({ where });
-    res.json({ ideas: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
-};
 
-export const getIdeaById = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
+  created(res, { ...idea.toJSON(), openRoles: roles }, 'Idea published successfully');
+});
 
-    await idea.update({ viewCount: idea.viewCount + 1 });
+export const getIdeas = asyncHandler(async (req, res) => {
+  const { page, limit, offset, order } = parsePagination(req.query);
+  const { status, sector, stage, category, skill, q = '' } = req.query;
 
-    const author = await User.findByPk(idea.author, {
-      attributes: ['id', 'name', 'photos', 'healthSpecialty', 'innovationFocus'],
-    });
-
-    res.json({ ...idea.toJSON(), author });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const updateIdea = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
-    if (idea.author !== req.userId) return res.status(403).json({ message: 'Only the author can update' });
-
-    await idea.update(req.body);
-    res.json(idea);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const deleteIdea = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
-    if (idea.author !== req.userId) return res.status(403).json({ message: 'Only the author can delete' });
-
-    await idea.destroy();
-    res.json({ message: 'Idea deleted' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-export const requestCollaboration = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
-    if (idea.author === req.userId) return res.status(400).json({ message: 'Cannot collaborate on your own idea' });
-
-    const existing = idea.collaborationRequests.find(r => r.userId === req.userId);
-    if (existing) return res.status(400).json({ message: 'Already requested' });
-
-    const updatedRequests = [
-      ...idea.collaborationRequests,
-      {
-        userId: req.userId,
-        message: req.body.message || '',
-        offeredRole: req.body.offeredRole || '',
-        status: 'pending',
-        requestedAt: new Date().toISOString(),
-      },
+  const where = {};
+  if (status) where.status = status;
+  if (sector) where.sector = sector;
+  if (stage) where.stage = stage;
+  if (category) where.category = category;
+  if (skill) where.skillsNeeded = { [Op.contains]: [skill] };
+  if (q) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${q}%` } },
+      { description: { [Op.iLike]: `%${q}%` } },
     ];
+  }
+  if (req.query.mine === 'true') where.author = req.userId;
 
-    await idea.update({ collaborationRequests: updatedRequests });
+  const { count, rows: ideas } = await Idea.findAndCountAll({
+    where,
+    distinct: true,
+    include: [
+      { model: User, as: 'authorDetail', attributes: ['id', 'name', 'headline', 'role', 'isVerified', 'photos', 'organizationId'] },
+      { model: TeamRole, as: 'openRoles', where: { status: 'open' }, required: false },
+    ],
+    order,
+    offset,
+    limit,
+  });
 
+  success(res, ideas, 'Ideas fetched', paginationMeta(page, limit, count));
+});
+
+export const getIdeaById = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id, {
+    include: [
+      { model: User, as: 'authorDetail', attributes: { exclude: ['password'] } },
+      { model: TeamRole, as: 'openRoles' },
+      { model: Team, as: 'team', include: [{ model: TeamMember, as: 'members', include: [{ model: User, as: 'profile', attributes: ['id', 'name', 'headline', 'role', 'photos'] }] }] },
+    ],
+  });
+  if (!idea) return notFound(res, 'Idea');
+
+  await idea.update({ viewCount: (idea.viewCount || 0) + 1 });
+  success(res, idea, 'Idea fetched');
+});
+
+export const updateIdea = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+  if (idea.author !== req.userId) return fail(res, 403, 'Only the author can update this idea');
+
+  const updates = {};
+  for (const field of IDEA_UPDATE_FIELDS) {
+    if (req.body[field] !== undefined) updates[field] = req.body[field];
+  }
+
+  await idea.update(updates);
+  success(res, idea, 'Idea updated');
+});
+
+export const updateIdeaStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  if (!Object.values(IDEA_STATUS).includes(status)) {
+    return fail(res, 400, `status must be one of: ${Object.values(IDEA_STATUS).join(', ')}`);
+  }
+
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+  if (idea.author !== req.userId) return fail(res, 403, 'Only the author can update status');
+
+  if (status === IDEA_STATUS.TEAM_FORMED) {
+    const team = await getOrCreateTeamForIdea(idea.id);
+    await idea.update({ status });
+    return success(res, { idea, team }, 'Team marked as formed');
+  }
+
+  await idea.update({ status });
+  success(res, idea, 'Idea status updated');
+});
+
+export const deleteIdea = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+  const isAdmin = ['admin', 'moderator', 'support'].includes(req.user.role);
+  if (idea.author !== req.userId && !isAdmin) return fail(res, 403, 'Only the author can delete this idea');
+
+  await idea.destroy();
+  success(res, null, 'Idea deleted');
+});
+
+export const expressInterest = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  if (idea.author === req.userId) return fail(res, 400, 'You cannot express interest in your own idea');
+
+  const { connection, already } = await sendConnectionRequest({
+    requester: req.userId,
+    recipient: idea.author,
+    ideaId: idea.id,
+    note: req.body.note || req.body.message || '',
+  });
+
+  if (!already) await notifyConnectionRequest(connection);
+
+  success(res, { connectionId: connection.id, status: connection.status }, already
+    ? 'You already expressed interest in this idea'
+    : 'Interest sent to the idea owner');
+});
+
+export const likeIdea = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  const existing = await Like.findOne({
+    where: { user: req.userId, targetType: 'idea', targetId: req.params.id },
+  });
+
+  if (existing) {
+    await existing.destroy();
+    await idea.update({ likeCount: Math.max(0, idea.likeCount - 1) });
+    return success(res, { liked: false, likeCount: idea.likeCount });
+  }
+
+  await Like.create({ user: req.userId, targetType: 'idea', targetId: req.params.id });
+  await idea.update({ likeCount: idea.likeCount + 1 });
+
+  if (idea.author !== req.userId) {
     await createNotification({
       user: idea.author,
-      type: 'collaboration_request',
-      title: 'New collaboration request',
-      body: `Someone wants to collaborate on "${idea.title}"`,
+      type: 'reaction',
+      title: 'Your idea was liked',
+      body: `Someone liked your idea "${idea.title}"`,
       data: { ideaId: idea.id },
     });
-
-    res.json({ message: 'Collaboration requested' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
   }
-};
 
-export const respondToCollaboration = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
-    if (idea.author !== req.userId) return res.status(403).json({ message: 'Only the author can respond' });
+  success(res, { liked: true, likeCount: idea.likeCount });
+});
 
-    const { requestUserId, status } = req.body;
-    const updatedRequests = idea.collaborationRequests.map(r => {
-      if (r.userId === requestUserId) {
-        return { ...r, status, respondedAt: new Date().toISOString() };
-      }
-      return r;
-    });
+// ===== Open roles (team formation) =====
 
-    await idea.update({ collaborationRequests: updatedRequests });
+export const addOpenRole = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+  if (idea.author !== req.userId) return fail(res, 403, 'Only the author can add roles');
 
-    await createNotification({
-      user: requestUserId,
-      type: status === 'accepted' ? 'collaboration_accepted' : 'collaboration_rejected',
-      title: status === 'accepted' ? 'Collaboration accepted!' : 'Collaboration update',
-      body: status === 'accepted'
-        ? `Your request to collaborate on "${idea.title}" was accepted!`
-        : `Your request to collaborate on "${idea.title}" was declined.`,
-      data: { ideaId: idea.id },
-    });
+  const role = await TeamRole.create({ idea: idea.id, ...req.body });
+  created(res, role, 'Open role added');
+});
 
-    res.json({ message: `Collaboration ${status}` });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const listOpenRoles = asyncHandler(async (req, res) => {
+  const roles = await TeamRole.findAll({ where: { idea: req.params.id } });
+  success(res, roles, 'Roles fetched');
+});
 
-export const getSuggestedCollaborators = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
+export const updateOpenRole = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
 
-    const matches = await findPotentialMatches(req.userId, 10);
-    const filtered = matches.filter(m => {
-      const userSkills = (m.user.skills || []).map(s => typeof s === 'string' ? s : s.name);
-      return idea.skillsNeeded.some(s => userSkills.includes(s));
-    });
+  const role = await TeamRole.findOne({ where: { id: req.params.roleId, idea: idea.id } });
+  if (!role) return notFound(res, 'Role');
+  if (idea.author !== req.userId) return fail(res, 403, 'Only the author can update roles');
 
-    res.json(filtered.slice(0, 10));
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+  await role.update(req.body);
+  success(res, role, 'Role updated');
+});
 
-export const likeIdea = async (req, res) => {
-  try {
-    const idea = await Idea.findByPk(req.params.id);
-    if (!idea) return res.status(404).json({ message: 'Idea not found' });
+export const deleteOpenRole = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
 
-    const existing = await Like.findOne({
-      where: { user: req.userId, targetType: 'idea', targetId: req.params.id },
-    });
+  const role = await TeamRole.findOne({ where: { id: req.params.roleId, idea: idea.id } });
+  if (!role) return notFound(res, 'Role');
+  if (idea.author !== req.userId) return fail(res, 403, 'Only the author can remove roles');
 
-    if (existing) {
-      await existing.destroy();
-      await idea.update({ likeCount: Math.max(0, idea.likeCount - 1) });
-      res.json({ liked: false });
-    } else {
-      await Like.create({ user: req.userId, targetType: 'idea', targetId: req.params.id });
-      await idea.update({ likeCount: idea.likeCount + 1 });
+  await role.destroy();
+  success(res, null, 'Role removed');
+});
 
-      if (idea.author !== req.userId) {
-        await createNotification({
-          user: idea.author,
-          type: 'idea_liked',
-          title: 'Your idea was liked',
-          body: `Someone liked your idea "${idea.title}"`,
-          data: { ideaId: idea.id },
-        });
-      }
+// ===== Suggested collaborators =====
 
-      res.json({ liked: true });
-    }
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
+export const getSuggestedCollaborators = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  const matches = await findCollaboratorsForIdea(idea, req.query.limit ? parseInt(req.query.limit) : 10);
+  success(res, matches, 'Suggested collaborators');
+});

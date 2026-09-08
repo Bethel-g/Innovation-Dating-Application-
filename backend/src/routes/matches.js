@@ -2,6 +2,7 @@ import express from 'express';
 import {
   swipe, getMatches, getPotentialMatches, getDailySuggestions,
   getMatchInsight, blockUser, getSwipeCount,
+  getRecommendedConnections,
 } from '../controllers/matchController.js';
 import { authenticateUser } from '../middleware/auth.js';
 
@@ -13,6 +14,7 @@ router.post('/swipe', swipe);
 router.get('/', getMatches);
 router.get('/potential', getPotentialMatches);
 router.get('/daily', getDailySuggestions);
+router.get('/recommended', getRecommendedConnections);
 router.get('/insight/:matchId', getMatchInsight);
 router.post('/block', blockUser);
 router.get('/swipe-count', getSwipeCount);

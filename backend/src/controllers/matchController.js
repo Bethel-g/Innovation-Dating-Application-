@@ -209,3 +209,15 @@ export const getSwipeCount = async (req, res) => {
     res.status(500).json({ message: 'Failed to get swipe count' });
   }
 };
+
+export const getRecommendedConnections = async (req, res) => {
+  try {
+    const { recommendConnections } = await import('../services/matchingService.js');
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    const recommendations = await recommendConnections(req.userId, limit);
+    res.json(recommendations);
+  } catch (error) {
+    console.error('Error getting recommendations:', error);
+    res.status(500).json({ message: 'Failed to get recommendations' });
+  }
+};

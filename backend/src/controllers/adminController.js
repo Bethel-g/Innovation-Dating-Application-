@@ -17,6 +17,127 @@ import Comment from '../models/Comment.js';
 import Like from '../models/Like.js';
 import Follow from '../models/Follow.js';
 import { processCampaign } from '../services/notificationService.js';
+import VerificationRequest from '../models/VerificationRequest.js';
+import Organization from '../models/Organization.js';
+import Idea from '../models/Idea.js';
+import Team from '../models/Team.js';
+import TeamRole from '../models/TeamRole.js';
+import Connection from '../models/Connection.js';
+import Opportunity from '../models/Opportunity.js';
+import OpportunityApplication from '../models/OpportunityApplication.js';
+import { dispatch } from '../services/notificationService.js';
+
+export const getVerificationRequests = async (req, res) => {
+  try {
+    const { status = 'pending', page = 1, limit = 20 } = req.query;
+    const where = {};
+    if (status && status !== 'all') where.status = status;
+
+    const { count, rows } = await VerificationRequest.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: 'userDetail', attributes: ['id', 'name', 'email', 'photos', 'role', 'sector'] },
+        { model: Organization, as: 'orgDetail', attributes: ['id', 'name', 'type', 'verified'] },
+      ],
+      order: [['createdAt', 'ASC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    res.json({ requests: rows, total: count, page: parseInt(page), totalPages: Math.ceil(count / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resolveVerificationRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'status must be approved or rejected' });
+    }
+
+    const request = await VerificationRequest.findByPk(id);
+    if (!request) return res.status(404).json({ message: 'Verification request not found' });
+    if (request.status !== 'pending') return res.status(400).json({ message: 'Request already resolved' });
+
+    await request.update({ status, reviewedBy: req.userId, reviewedAt: new Date() });
+
+    const targetUserId = request.userId || request.organizationId;
+
+    if (status === 'approved') {
+      if (request.requestType === 'user') {
+        await User.update({ isVerified: true }, { where: { id: request.userId } });
+      } else if (request.requestType === 'organization') {
+        await Organization.update({ verified: true }, { where: { id: request.organizationId } });
+      }
+    }
+
+    if (targetUserId) {
+      await dispatch({
+        user: targetUserId,
+        type: 'verification_status',
+        title: status === 'approved' ? 'Verification approved' : 'Verification update',
+        body: status === 'approved'
+          ? 'Your verification was approved. Your badge is now active.'
+          : 'Your verification request was rejected. Please review and resubmit.',
+        data: { requestId: request.id, status },
+      });
+    }
+
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const getInnovationAnalytics = async (req, res) => {
+  try {
+    const { period = '30d' } = req.query;
+    const days = parseInt(period) || 30;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const [
+      ideasByStage, ideasByStatus, teamsTotal, rolesTotal,
+      connectionsCount, pendingConnections, opportunitiesTotal,
+      openOpportunities, opportunityApplications, organizationsTotal,
+      investorsTotal, ideaTrend, teamTrend,
+    ] = await Promise.all([
+      Idea.findAll({ attributes: ['stage', [fn('COUNT', col('id')), 'count']], group: ['stage'], raw: true }),
+      Idea.findAll({ attributes: ['status', [fn('COUNT', col('id')), 'count']], group: ['status'], raw: true }),
+      Team.count(),
+      TeamRole.count(),
+      Connection.count({ where: { status: 'accepted' } }),
+      Connection.count({ where: { status: 'pending' } }),
+      Opportunity.count(),
+      Opportunity.count({ where: { status: { [Op.in]: ['open', 'closing_soon'] } } }),
+      OpportunityApplication.count(),
+      Organization.count(),
+      User.count({ where: { role: 'investor' } }),
+      Idea.findAll({
+        attributes: [[fn('DATE', col('createdAt')), 'date'], [fn('COUNT', col('id')), 'count']],
+        where: { createdAt: { [Op.gte]: since } },
+        group: ['date'], order: [['date', 'ASC']], raw: true,
+      }),
+      Team.findAll({
+        attributes: [[fn('DATE', col('createdAt')), 'date'], [fn('COUNT', col('id')), 'count']],
+        where: { createdAt: { [Op.gte]: since } },
+        group: ['date'], order: [['date', 'ASC']], raw: true,
+      }),
+    ]);
+
+    res.json({
+      ideasByStage, ideasByStatus, teamsTotal, rolesTotal,
+      connectionsCount, pendingConnections, opportunitiesTotal,
+      openOpportunities, opportunityApplications, organizationsTotal,
+      investorsTotal, ideaTrend, teamTrend,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const getDashboardStats = async (req, res) => {
   try {

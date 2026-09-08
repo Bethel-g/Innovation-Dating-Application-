@@ -18,7 +18,7 @@ export const createPost = async (req, res) => {
 
 export const getFeed = async (req, res) => {
   try {
-    const { page = 1, limit = 20 } = req.query;
+    const { page = 1, limit = 20, hashtag, type, mine } = req.query;
     const offset = (page - 1) * limit;
 
     const following = await Follow.findAll({
@@ -28,8 +28,17 @@ export const getFeed = async (req, res) => {
     const followingIds = following.map(f => f.following);
     followingIds.push(req.userId);
 
+    const where = { isDraft: false };
+    if (mine !== 'true') where.author = followingIds;
+
+    if (hashtag) {
+      const normalized = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+      where.hashtags = { [Op.contains]: [normalized] };
+    }
+    if (type) where.type = type;
+
     const posts = await Post.findAll({
-      where: { author: followingIds, isDraft: false },
+      where,
       order: [['createdAt', 'DESC']],
       offset: parseInt(offset),
       limit: parseInt(limit),
@@ -38,21 +47,21 @@ export const getFeed = async (req, res) => {
     const authorIds = [...new Set(posts.map(p => p.author))];
     const authors = await User.findAll({
       where: { id: authorIds },
-      attributes: ['id', 'name', 'headline', 'photos', 'healthSpecialty', 'innovationFocus'],
+      attributes: ['id', 'name', 'headline', 'photos', 'sector', 'role'],
     });
     const authorMap = Object.fromEntries(authors.map(a => [a.id, a.toJSON()]));
 
     const postIds = posts.map(p => p.id);
     const likes = await Like.findAll({ where: { targetType: 'post', targetId: postIds, user: req.userId } });
-    const likedIds = new Set(likes.map(l => l.targetId));
+    const reactMap = new Map(likes.map(l => [l.targetId, l.reactionType]));
 
     const enriched = posts.map(p => ({
       ...p.toJSON(),
       author: authorMap[p.author] || { id: p.author },
-      isLikedByMe: likedIds.has(p.id),
+      myReaction: reactMap.get(p.id) || null,
     }));
 
-    const total = await Post.count({ where: { author: followingIds, isDraft: false } });
+    const total = await Post.count({ where });
 
     res.json({ posts: enriched, total, page: parseInt(page), totalPages: Math.ceil(total / limit) });
   } catch (error) {
@@ -182,16 +191,23 @@ export const likePost = async (req, res) => {
     const post = await Post.findByPk(req.params.id);
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
+    const { reactionType = 'like' } = req.body;
+
     const existing = await Like.findOne({ where: { user: req.userId, targetType: 'post', targetId: req.params.id } });
     if (existing) {
-      await existing.destroy();
-      await post.decrement('likeCount');
-      return res.json({ liked: false, likeCount: post.likeCount - 1 });
+      if (existing.reactionType === reactionType) {
+        await existing.destroy();
+        await post.decrement('likeCount');
+        return res.json({ liked: false, reactionType: null, likeCount: post.likeCount - 1 });
+      }
+      existing.reactionType = reactionType;
+      await existing.save();
+      return res.json({ liked: true, reactionType, likeCount: post.likeCount });
     }
 
-    await Like.create({ user: req.userId, targetType: 'post', targetId: req.params.id });
+    await Like.create({ user: req.userId, targetType: 'post', targetId: req.params.id, reactionType });
     await post.increment('likeCount');
-    res.json({ liked: true, likeCount: post.likeCount + 1 });
+    res.json({ liked: true, reactionType, likeCount: post.likeCount + 1 });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

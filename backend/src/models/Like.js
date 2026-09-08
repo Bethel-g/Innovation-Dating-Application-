@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
+import { REACTION_TYPES } from '../config/constants.js';
 
 const Like = sequelize.define('Like', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -9,6 +10,10 @@ const Like = sequelize.define('Like', {
     allowNull: false,
   },
   targetId: { type: DataTypes.UUID, allowNull: false },
+  reactionType: {
+    type: DataTypes.ENUM(...Object.values(REACTION_TYPES)),
+    defaultValue: REACTION_TYPES.LIKE,
+  },
 }, {
   timestamps: true,
   indexes: [

@@ -10,6 +10,8 @@ import {
   getCommunities, updateCommunity, deleteCommunity,
   getProjects, updateProject, deleteProject,
   getRoles, updateUserRole,
+  getVerificationRequests, resolveVerificationRequest,
+  getInnovationAnalytics,
 } from '../controllers/adminController.js';
 import { authenticateUser, requireAdmin, requireRole, requirePermission } from '../middleware/auth.js';
 import User from '../models/User.js';
@@ -84,5 +86,11 @@ router.delete('/projects/:id', requirePermission('projectManagement'), deletePro
 /* Role & Permission Management */
 router.get('/roles', requirePermission('userManagement'), getRoles);
 router.put('/users/:id/role', requirePermission('userManagement'), updateUserRole);
+
+/* Innovation Ecosystem - Verification */
+router.get('/verifications', requirePermission('contentModeration'), getVerificationRequests);
+router.put('/verifications/:id', requirePermission('contentModeration'), resolveVerificationRequest);
+
+router.get('/analytics/innovation', requirePermission('analytics'), getInnovationAnalytics);
 
 export default router;

@@ -3,7 +3,7 @@ import {
   updateProfile, getProfile, uploadPhotos, deletePhoto,
   setPrimaryPhoto, updatePreferences, updateLocation,
   completeOnboarding, getNearbyUsers, deactivateAccount,
-  reportUser,
+  reportUser, exploreUsers, requestVerification,
 } from '../controllers/userController.js';
 import { authenticateUser } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
@@ -12,6 +12,8 @@ const router = express.Router();
 
 router.use(authenticateUser);
 
+router.get('/explore', exploreUsers);
+router.post('/verify', requestVerification);
 router.put('/profile', updateProfile);
 router.get('/profile/:id', getProfile);
 router.post('/photos', upload.array('photos', 6), uploadPhotos);

@@ -4,6 +4,7 @@ import { sequelize } from '../config/db.js';
 import {
   USER_ROLES, HEALTH_SPECIALTIES, WORK_SETTINGS, INNOVATION_FOCUS,
   PERSONALITY_TRAITS, PROFICIENCY_LEVELS, INTENTS, EXPERIENCE_LEVEL,
+  SECTORS,
 } from '../config/constants.js';
 
 const User = sequelize.define('User', {
@@ -33,7 +34,15 @@ const User = sequelize.define('User', {
   maxDailySwipes: { type: DataTypes.INTEGER, defaultValue: 50 },
   onboardingComplete: { type: DataTypes.BOOLEAN, defaultValue: false },
   isActive: { type: DataTypes.BOOLEAN, defaultValue: true },
-  role: { type: DataTypes.ENUM('user', 'admin', 'moderator', 'support', 'mentor', 'company'), defaultValue: 'user' },
+  role: { type: DataTypes.ENUM('user', 'admin', 'moderator', 'support', 'mentor', 'company', 'domain_expert', 'technical_builder', 'ecosystem_builder', 'investor'), defaultValue: 'user' },
+  organizationId: { type: DataTypes.UUID, allowNull: true },
+  sector: { type: DataTypes.ENUM(...SECTORS), allowNull: true },
+
+  // Investor profile
+  investmentFocus: { type: DataTypes.JSON, defaultValue: [] },
+  investmentStages: { type: DataTypes.JSON, defaultValue: [] },
+  ticketSizeMin: { type: DataTypes.INTEGER, allowNull: true },
+  ticketSizeMax: { type: DataTypes.INTEGER, allowNull: true },
   notificationPreferences: { type: DataTypes.JSON, allowNull: true },
   permissions: {
     type: DataTypes.JSON,

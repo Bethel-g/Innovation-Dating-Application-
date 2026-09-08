@@ -34,6 +34,7 @@ import './models/Review.js';
 import './models/GroupMessage.js';
 import './models/ActivityLog.js';
 import './models/SharedFile.js';
+import './models/associations.js';
 
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -50,6 +51,13 @@ import taskRoutes from './routes/tasks.js';
 import ideaRoutes from './routes/ideas.js';
 import reputationRoutes from './routes/reputation.js';
 import groupRoutes from './routes/groups.js';
+import connectionRoutes from './routes/connections.js';
+import teamRoutes from './routes/team.js';
+import opportunityRoutes from './routes/opportunities.js';
+import organizationRoutes from './routes/organizations.js';
+import bookmarkRoutes from './routes/bookmarks.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { autoCloseExpired } from './controllers/opportunityController.js';
 
 dotenv.config();
 
@@ -96,6 +104,11 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/ideas', ideaRoutes);
 app.use('/api/reputation', reputationRoutes);
 app.use('/api/groups', groupRoutes);
+app.use('/api/connections', connectionRoutes);
+app.use('/api/team', teamRoutes);
+app.use('/api/opportunities', opportunityRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/bookmarks', bookmarkRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -104,6 +117,8 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use(errorHandler);
 
 setupSocket(io);
 
@@ -118,6 +133,14 @@ cron.schedule('0 0 * * *', async () => {
 });
 
 const PORT = process.env.PORT || 5000;
+
+cron.schedule('*/30 * * * *', async () => {
+  try {
+    await autoCloseExpired();
+  } catch (err) {
+    console.error('Auto-close opportunities job failed:', err.message);
+  }
+});
 
 connectDB()
   .then(() => {

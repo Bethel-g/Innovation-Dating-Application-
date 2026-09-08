@@ -1,11 +1,23 @@
 export const USER_ROLES = {
   USER: 'user',
+  DOMAIN_EXPERT: 'domain_expert',
+  TECHNICAL_BUILDER: 'technical_builder',
+  ECOSYSTEM_BUILDER: 'ecosystem_builder',
+  INVESTOR: 'investor',
   MENTOR: 'mentor',
   COMPANY: 'company',
   ADMIN: 'admin',
   MODERATOR: 'moderator',
   SUPPORT: 'support',
 };
+
+export const USER_ROLE_VALUES = Object.values(USER_ROLES);
+
+// Roles that can create/publish ideas on the platform
+export const IDEA_AUTHOR_ROLES = [USER_ROLES.DOMAIN_EXPERT, USER_ROLES.TECHNICAL_BUILDER, USER_ROLES.USER];
+
+// Roles with administrative access
+export const ADMIN_ROLES = [USER_ROLES.ADMIN, USER_ROLES.MODERATOR, USER_ROLES.SUPPORT];
 
 export const SKILL_CATEGORIES = {
   TECH: 'tech',
@@ -51,11 +63,23 @@ export const CONNECTION_STATE = {
 
 export const IDEA_STATUS = {
   OPEN: 'open',
+  IN_DISCUSSION: 'in_discussion',
+  TEAM_FORMED: 'team_formed',
+  CLOSED: 'closed',
+  // Legacy values retained for backward compatibility with existing rows
   IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
-  CLOSED: 'closed',
 };
+
+export const IDEA_STAGE = {
+  CONCEPT: 'concept',
+  PROTOTYPE: 'prototype',
+  MVP: 'mvp',
+  PRODUCTION: 'production',
+};
+
+export const IDEA_STAGE_VALUES = Object.values(IDEA_STAGE);
 
 export const PROJECT_STATUS = {
   OPEN: 'open',
@@ -234,3 +258,140 @@ export const PROFESSIONAL_SKILLS = {
     'neuroscience', 'epidemiology', 'pharmacology', 'genomics',
   ],
 };
+
+// ---------------------------------------------------------------------------
+// InnoConnect-specific taxonomies
+// ---------------------------------------------------------------------------
+
+export const ORG_TYPES = {
+  HUB: 'hub',
+  INCUBATOR: 'incubator',
+  ACCELERATOR: 'accelerator',
+  COMPANY: 'company',
+  NGO: 'ngo',
+  GOVERNMENT: 'government',
+  UNIVERSITY: 'university',
+};
+
+export const ORG_TYPE_VALUES = Object.values(ORG_TYPES);
+
+export const ORG_VERIFICATION_STATUS = {
+  UNVERIFIED: 'unverified',
+  PENDING: 'pending',
+  VERIFIED: 'verified',
+  REJECTED: 'rejected',
+};
+
+export const VERIFICATION_REQUEST_TYPE = {
+  PROFESSIONAL: 'professional',
+  CREDENTIAL: 'credential',
+  ORGANIZATION: 'organization',
+};
+
+export const VERIFICATION_REQUEST_STATUS = {
+  PENDING: 'pending',
+  IN_REVIEW: 'in_review',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+};
+
+export const OPPORTUNITY_TYPE = {
+  GRANT: 'grant',
+  INCUBATION: 'incubation',
+  ACCELERATOR: 'accelerator',
+  CALL_FOR_INNOVATION: 'call_for_innovation',
+  EVENT: 'event',
+  FUNDING: 'funding',
+};
+
+export const OPPORTUNITY_TYPE_VALUES = Object.values(OPPORTUNITY_TYPE);
+
+export const OPPORTUNITY_STATUS = {
+  DRAFT: 'draft',
+  OPEN: 'open',
+  CLOSING_SOON: 'closing_soon',
+  CLOSED: 'closed',
+};
+
+export const OPPORTUNITY_STATUS_VALUES = Object.values(OPPORTUNITY_STATUS);
+
+export const OPPORTUNITY_APPLICANT_TYPE = {
+  USER: 'user',
+  TEAM: 'team',
+  IDEA: 'idea',
+};
+
+export const TEAM_ROLE_TYPE = {
+  COFOUNDER: 'cofounder',
+  ENGINEER: 'engineer',
+  DESIGNER: 'designer',
+  RESEARCHER: 'researcher',
+  CLINICAL: 'clinical',
+  DOMAIN_ADVISOR: 'domain_advisor',
+  INVESTOR: 'investor',
+  BUSINESS: 'business',
+  OTHER: 'other',
+};
+
+export const TEAM_ROLE_TYPE_VALUES = Object.values(TEAM_ROLE_TYPE);
+
+export const TEAM_ROLE_STATUS = {
+  OPEN: 'open',
+  FILLED: 'filled',
+  REMOVED: 'removed',
+};
+
+export const APPLICATION_STATUS = {
+  PENDING: 'pending',
+  ACCEPTED: 'accepted',
+  DECLINED: 'declined',
+  WITHDRAWN: 'withdrawn',
+};
+
+export const BOOKMARK_TARGET_TYPE = {
+  IDEA: 'idea',
+  USER: 'user',
+  OPPORTUNITY: 'opportunity',
+};
+
+export const NOTIFICATION_CHANNEL = {
+  IN_APP: 'in_app',
+  EMAIL: 'email',
+};
+
+export const NOTIFICATION_EVENT_TYPES = [
+  'connection_request',
+  'connection_accepted',
+  'idea_interest',
+  'idea_interest_accepted',
+  'role_application',
+  'role_application_accepted',
+  'role_application_declined',
+  'team_formed',
+  'new_opportunity',
+  'opportunity_application',
+  'opportunity_application_accepted',
+  'comment',
+  'reaction',
+  'mention',
+  'new_message',
+  'verification_status',
+  'admin_action',
+];
+
+export const REACTION_TYPES = {
+  LIKE: 'like',
+  CELEBRATE: 'celebrate',
+  INSIGHTFUL: 'insightful',
+};
+
+export const REACTION_TYPE_VALUES = Object.values(REACTION_TYPES);
+
+export const SECTORS = [
+  'healthcare', 'agriculture', 'education', 'fintech', 'environment',
+  'energy', 'transport', 'logistics', 'government_services', 'manufacturing',
+  'construction', 'retail', 'media', 'telecom', 'ai_ml', 'social_impact',
+  'tourism', 'other',
+];
+
+export const SECTOR_VALUES = SECTORS;

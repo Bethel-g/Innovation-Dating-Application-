@@ -1,6 +1,8 @@
 import { Op } from 'sequelize';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
+import NotificationPreference from '../models/NotificationPreference.js';
+import { NOTIFICATION_CHANNEL } from '../config/constants.js';
 
 export const getNotifications = async (req, res) => {
   try {
@@ -81,8 +83,21 @@ export const getUnreadCount = async (req, res) => {
 
 export const getNotificationPreferences = async (req, res) => {
   try {
-    const user = await User.findByPk(req.userId, { attributes: ['notificationPreferences'] });
-    res.json(user.notificationPreferences || {});
+    const prefs = await NotificationPreference.findAll({
+      where: { user: req.userId },
+      order: [['eventType', 'ASC']],
+    });
+
+    const grouped = {};
+    for (const pref of prefs) {
+      if (!grouped[pref.eventType]) grouped[pref.eventType] = {};
+      grouped[pref.eventType][pref.channel] = pref.enabled;
+    }
+
+    res.json({
+      preferredChannels: Object.values(NOTIFICATION_CHANNEL),
+      preferences: grouped,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -90,12 +105,20 @@ export const getNotificationPreferences = async (req, res) => {
 
 export const updateNotificationPreferences = async (req, res) => {
   try {
-    await User.update(
-      { notificationPreferences: req.body },
-      { where: { id: req.userId } }
-    );
-    const user = await User.findByPk(req.userId, { attributes: ['notificationPreferences'] });
-    res.json(user.notificationPreferences);
+    const items = Array.isArray(req.body) ? req.body : [req.body];
+
+    for (const { eventType, channel = NOTIFICATION_CHANNEL.IN_APP, enabled = true } of items) {
+      if (!eventType) return res.status(400).json({ message: 'eventType is required' });
+      await NotificationPreference.upsert({
+        user: req.userId,
+        channel,
+        eventType,
+        enabled,
+      });
+    }
+
+    const prefs = await NotificationPreference.findAll({ where: { user: req.userId } });
+    res.json(prefs);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

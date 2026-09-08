@@ -4,7 +4,7 @@ import { sequelize } from '../config/db.js';
 const GroupMessage = sequelize.define('GroupMessage', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
   groupType: {
-    type: DataTypes.ENUM('project', 'community'),
+    type: DataTypes.ENUM('project', 'community', 'team'),
     allowNull: false,
   },
   groupId: { type: DataTypes.UUID, allowNull: false },

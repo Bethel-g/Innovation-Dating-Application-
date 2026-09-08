@@ -14,7 +14,17 @@ const connectDB = async () => {
   try {
     await sequelize.authenticate();
     console.log('PostgreSQL Connected');
-    await sequelize.sync({ alter: true });
+    try {
+      await sequelize.sync({ alter: true });
+    } catch (error) {
+      if (error.parent?.code === '42P01') {
+        console.warn('Database schema partially missing — creating missing tables first');
+        await sequelize.sync();
+        await sequelize.sync({ alter: true });
+      } else {
+        throw error;
+      }
+    }
     console.log('Database synced');
     dbReady = true;
   } catch (error) {

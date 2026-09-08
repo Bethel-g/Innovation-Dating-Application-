@@ -1,6 +1,7 @@
 import { Op } from 'sequelize';
 import User from '../models/User.js';
 import { generateToken } from '../utils/helpers.js';
+import { USER_ROLES, SECTORS } from '../config/constants.js';
 
 // Enhanced validation utilities
 const validateEmail = (email) => {
@@ -13,11 +14,22 @@ const validatePassword = (password) => {
 
 export const register = async (req, res) => {
   try {
-    const { email, password, name, phone, dateOfBirth, gender } = req.body;
+    const {
+      email, password, name, phone, dateOfBirth, gender,
+      role, sector, skills, headline, bio, locationCity, locationCountry,
+      lookingForTeam, availableForProjects,
+    } = req.body;
 
     // Validate required fields
     if (!email || !password || !name) {
       return res.status(400).json({ message: 'Email, password, and name are required' });
+    }
+
+    if (role && !Object.values(USER_ROLES).includes(role)) {
+      return res.status(400).json({ message: `role must be one of: ${Object.values(USER_ROLES).join(', ')}` });
+    }
+    if (sector && !SECTORS.includes(sector)) {
+      return res.status(400).json({ message: `sector must be one of: ${SECTORS.join(', ')}` });
     }
 
     const existing = await User.findOne({ where: { email } });
@@ -32,6 +44,15 @@ export const register = async (req, res) => {
       phone: phone || null,
       dateOfBirth: dateOfBirth || null,
       gender: gender || null,
+      role: role || 'user',
+      sector: sector || null,
+      skills: skills || [],
+      headline: headline || null,
+      bio: bio || null,
+      locationCity: locationCity || null,
+      locationCountry: locationCountry || null,
+      lookingForTeam: !!lookingForTeam,
+      availableForProjects: !!availableForProjects,
     });
 
     user.lastActive = new Date();

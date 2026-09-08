@@ -109,6 +109,79 @@ export const findPotentialMatches = async (userId, limit = 20) => {
 
 export const getDailySuggestions = async (userId) => findPotentialMatches(userId, 10);
 
+const userPublicAttributes = ['id', 'name', 'headline', 'role', 'photos', 'skills', 'primarySkills', 'secondarySkills', 'sector', 'locationCity', 'locationCountry', 'experienceLevel', 'yearsOfExperience', 'lookingForTeam', 'availableForProjects', 'isVerified', 'innovationFocus', 'intents'];
+
+const buildSkillSet = (u) => [...(u.primarySkills || []), ...(u.secondarySkills || []), ...(u.skills || [])];
+
+const complementaryRoles = {
+  domain_expert: ['technical_builder', 'user'],
+  technical_builder: ['domain_expert', 'ecosystem_builder'],
+  ecosystem_builder: ['domain_expert', 'technical_builder'],
+  investor: ['domain_expert', 'technical_builder'],
+  user: ['domain_expert', 'technical_builder'],
+};
+
+export const findCollaboratorsForIdea = async (idea, limit = 10) => {
+  const skillsNeeded = idea.skillsNeeded || [];
+  if (!skillsNeeded.length) return [];
+
+  const candidates = await User.findAll({
+    where: { isActive: true, id: { [Op.ne]: idea.author } },
+    attributes: userPublicAttributes,
+    limit: MAX_LOOKUP,
+  });
+
+  const scored = candidates.map(u => {
+    let score = 0;
+    const userSkills = buildSkillSet(u);
+    const matchedSkills = skillsNeeded.filter(s => userSkills.includes(s));
+    if (matchedSkills.length) score += (matchedSkills.length / skillsNeeded.length) * 50;
+    if (u.sector && idea.sector && u.sector === idea.sector) score += 15;
+    if ((u.interests || []).includes(idea.sector)) score += 10;
+    if (u.lookingForTeam || u.availableForProjects) score += 15;
+    if (u.yearsOfExperience >= 3) score += 10;
+    if ((u.intents || []).includes('collaborate')) score += 5;
+    return {
+      user: u,
+      matchedSkills,
+      compatibilityScore: Math.min(Math.round(score), 100),
+    };
+  });
+
+  scored.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+  return scored.slice(0, limit);
+};
+
+export const recommendConnections = async (userId, limit = 10) => {
+  const me = await User.findByPk(userId);
+  if (!me) return [];
+
+  const myRoles = complementaryRoles[me.role] || [];
+  const candidates = await User.findAll({
+    where: { isActive: true, id: { [Op.ne]: userId } },
+    attributes: userPublicAttributes,
+    limit: MAX_LOOKUP,
+  });
+
+  const mySkills = buildSkillSet(me);
+
+  const scored = candidates.map(u => {
+    let score = 0;
+    if (myRoles.includes(u.role)) score += 25;
+    if (u.sector && me.sector && u.sector === me.sector) score += 15;
+    const theirSkills = buildSkillSet(u);
+    const shared = mySkills.filter(s => theirSkills.includes(s)).length;
+    if (shared) score += Math.min(shared, 5) * 6;
+    if (u.lookingForTeam || me.lookingForTeam) score += 15;
+    if ((u.intents || []).includes('collaborate')) score += 10;
+    if (u.availableForProjects && me.availableForProjects) score += 8;
+    return { user: u, compatibilityScore: Math.min(score, 100) };
+  });
+
+  scored.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+  return scored.slice(0, limit);
+};
+
 export const findProjectCollaborators = async (project, limit = 10) => {
   const skillsNeeded = project.skillsNeeded || [];
   if (!skillsNeeded.length) return [];

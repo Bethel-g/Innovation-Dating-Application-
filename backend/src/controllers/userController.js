@@ -16,6 +16,8 @@ export const updateProfile = async (req, res) => {
       'healthSpecialty', 'workSetting', 'innovationFocus', 'personalityTraits',
       'certifications', 'education',
       'collaborationIntent', 'lookingForTeam', 'availableForProjects',
+      'sector', 'role', 'organizationId',
+      'investmentFocus', 'investmentStages', 'ticketSizeMin', 'ticketSizeMax',
     ];
     const updates = {};
 
@@ -232,6 +234,81 @@ export const deactivateAccount = async (req, res) => {
   try {
     await User.update({ isActive: false }, { where: { id: req.userId } });
     res.json({ message: 'Account deactivated' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const exploreUsers = async (req, res) => {
+  try {
+    const {
+      role, skill, sector, locationCity, q = '',
+      lookingForTeam, availableForProjects, investorOnly,
+      page = 1, limit = 20,
+    } = req.query;
+
+    const where = { id: { [Op.ne]: req.userId }, isActive: true };
+
+    if (role) where.role = role;
+    if (sector) where.sector = sector;
+    if (locationCity) where.locationCity = { [Op.iLike]: `%${locationCity}%` };
+    if (lookingForTeam === 'true') where.lookingForTeam = true;
+    if (availableForProjects === 'true') where.availableForProjects = true;
+    if (investorOnly === 'true') where.role = 'investor';
+
+    if (skill) where[Op.and] = [
+      { [Op.or]: [
+        { skills: { [Op.contains]: [skill] } },
+        { primarySkills: { [Op.contains]: [skill] } },
+        { secondarySkills: { [Op.contains]: [skill] } },
+      ] },
+    ];
+
+    if (q) {
+      where[Op.or] = where[Op.or] || [
+        { name: { [Op.iLike]: `%${q}%` } },
+        { headline: { [Op.iLike]: `%${q}%` } },
+        { bio: { [Op.iLike]: `%${q}%` } },
+      ];
+    }
+
+    const { count, rows } = await User.findAndCountAll({
+      where,
+      attributes: { exclude: ['password'] },
+      order: [['createdAt', 'DESC']],
+      offset: (page - 1) * limit,
+      limit: parseInt(limit),
+    });
+
+    res.json({ users: rows, total: count, page: parseInt(page), totalPages: Math.ceil(count / limit) });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const requestVerification = async (req, res) => {
+  try {
+    const VerificationRequest = (await import('../models/VerificationRequest.js')).default;
+
+    const user = await User.findByPk(req.userId);
+    if (user.isVerified) return res.status(400).json({ message: 'Already verified' });
+
+    const { documents = [], verificationNote = '' } = req.body;
+
+    const existing = await VerificationRequest.findOne({
+      where: { userId: req.userId, status: 'pending' },
+    });
+    if (existing) return res.status(400).json({ message: 'A verification request is already pending' });
+
+    const request = await VerificationRequest.create({
+      userId: req.userId,
+      requestType: 'user',
+      documents,
+      verificationNote,
+      status: 'pending',
+    });
+
+    res.status(201).json(request);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

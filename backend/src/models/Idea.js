@@ -1,6 +1,6 @@
 import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
-import { IDEA_STATUS, IDEA_CATEGORIES } from '../config/constants.js';
+import { IDEA_STATUS, IDEA_STAGE, IDEA_CATEGORIES, SECTORS } from '../config/constants.js';
 
 const Idea = sequelize.define('Idea', {
   id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
@@ -13,6 +13,15 @@ const Idea = sequelize.define('Idea', {
     type: DataTypes.ENUM(...IDEA_CATEGORIES),
     allowNull: true,
   },
+  sector: {
+    type: DataTypes.ENUM(...SECTORS),
+    allowNull: true,
+  },
+  stage: {
+    type: DataTypes.ENUM(...Object.values(IDEA_STAGE)),
+    allowNull: true,
+  },
+  desiredOutcome: { type: DataTypes.TEXT, allowNull: true },
   status: {
     type: DataTypes.ENUM(...Object.values(IDEA_STATUS)),
     defaultValue: IDEA_STATUS.OPEN,
