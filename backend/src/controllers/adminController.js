@@ -36,8 +36,8 @@ export const getVerificationRequests = async (req, res) => {
     const { count, rows } = await VerificationRequest.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'userDetail', attributes: ['id', 'name', 'email', 'photos', 'role', 'sector'] },
-        { model: Organization, as: 'orgDetail', attributes: ['id', 'name', 'type', 'verified'] },
+        { model: User, as: 'submitter', attributes: ['id', 'name', 'email', 'photos', 'role', 'sector'] },
+        { model: Organization, as: 'organizationDetail', attributes: ['id', 'name', 'type', 'verified'] },
       ],
       order: [['createdAt', 'ASC']],
       offset: (page - 1) * limit,
@@ -68,10 +68,10 @@ export const resolveVerificationRequest = async (req, res) => {
     const targetUserId = request.userId || request.organizationId;
 
     if (status === 'approved') {
-      if (request.requestType === 'user') {
-        await User.update({ isVerified: true }, { where: { id: request.userId } });
-      } else if (request.requestType === 'organization') {
+      if (request.requestType === 'organization') {
         await Organization.update({ verified: true }, { where: { id: request.organizationId } });
+      } else {
+        await User.update({ isVerified: true }, { where: { id: request.userId } });
       }
     }
 

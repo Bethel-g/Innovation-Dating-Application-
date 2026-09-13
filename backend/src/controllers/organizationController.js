@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Opportunity from '../models/Opportunity.js';
 import VerificationRequest from '../models/VerificationRequest.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { jsonbContains } from '../utils/jsonContains.js';
 import { success, created, fail, notFound } from '../utils/apiResponse.js';
 import { parsePagination, paginationMeta } from '../utils/pagination.js';
 
@@ -21,14 +22,14 @@ export const listOrganizations = asyncHandler(async (req, res) => {
 
   const where = {};
   if (type) where.type = type;
-  if (sector) where.sectors = { [Op.contains]: [sector] };
+  if (sector) where.sectors = jsonbContains('sectors', sector);
   if (q) where.name = { [Op.iLike]: `%${q}%` };
 
   const { count, rows } = await Organization.findAndCountAll({
     where,
     include: [
       { model: User, as: 'ownerProfile', attributes: ['id', 'name', 'photos'] },
-      { model: User, as: 'members', attributes: ['id', 'name', 'role', 'photos', 'sector'], through: { attributes: [] } },
+      { model: User, as: 'members', attributes: ['id', 'name', 'role', 'photos', 'sector'] },
     ],
     order: [['verified', 'DESC'], ['createdAt', 'DESC']],
     offset,
@@ -42,7 +43,7 @@ export const getOrganization = asyncHandler(async (req, res) => {
   const org = await Organization.findByPk(req.params.id, {
     include: [
       { model: User, as: 'ownerProfile', attributes: ['id', 'name', 'photos', 'headline'] },
-      { model: User, as: 'members', attributes: ['id', 'name', 'role', 'photos', 'sector', 'headline'], through: { attributes: [] } },
+      { model: User, as: 'members', attributes: ['id', 'name', 'role', 'photos', 'sector', 'headline'] },
       { model: Opportunity, as: 'opportunities', where: { status: { [Op.ne]: 'draft' } }, required: false, limit: 20 },
     ],
   });
@@ -99,3 +100,4 @@ export const submitVerification = asyncHandler(async (req, res) => {
 
   created(res, request, 'Verification submitted');
 });
+

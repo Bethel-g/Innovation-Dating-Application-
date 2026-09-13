@@ -12,6 +12,7 @@ const router = express.Router();
 router.use(authenticateUser);
 
 router.post('/', createPost);
+router.get('/', getFeed);
 router.get('/feed', getFeed);
 router.get('/explore', getExploreFeed);
 router.get('/user/:userId?', getUserPosts);

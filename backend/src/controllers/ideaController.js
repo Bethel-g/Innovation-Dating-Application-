@@ -10,6 +10,7 @@ import { findCollaboratorsForIdea } from '../services/matchingService.js';
 import { createNotification } from '../services/notificationService.js';
 import { sendConnectionRequest, notifyConnectionRequest } from '../services/connectionService.js';
 import { getOrCreateTeamForIdea } from '../services/teamService.js';
+import { jsonbContains } from '../utils/jsonContains.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success, created, fail, notFound } from '../utils/apiResponse.js';
 import { parsePagination, paginationMeta } from '../utils/pagination.js';
@@ -51,7 +52,7 @@ export const getIdeas = asyncHandler(async (req, res) => {
   if (sector) where.sector = sector;
   if (stage) where.stage = stage;
   if (category) where.category = category;
-  if (skill) where.skillsNeeded = { [Op.contains]: [skill] };
+  if (skill) where.skillsNeeded = jsonbContains('Idea.skillsNeeded', skill);
   if (q) {
     where[Op.or] = [
       { title: { [Op.iLike]: `%${q}%` } },

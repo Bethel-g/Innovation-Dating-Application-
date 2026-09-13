@@ -5,17 +5,20 @@ import Project from './models/Project.js';
 import ProjectMember from './models/ProjectMember.js';
 import Community from './models/Community.js';
 import CommunityMember from './models/CommunityMember.js';
+import Organization from './models/Organization.js';
+import Opportunity from './models/Opportunity.js';
 
 const seed = async () => {
   console.log('Seeding database...');
 
   const users = [
     {
-      email: 'admin@innovationdating.com',
-      password: 'admin123',
+      email: 'admin@innoconnect.dev',
+      password: 'Admin@12345',
       name: 'Platform Admin',
       role: 'admin',
       headline: 'Platform Administrator & Community Manager',
+      sector: 'other',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -32,8 +35,9 @@ const seed = async () => {
       email: 'sarah@example.com',
       password: 'password123',
       name: 'Sarah Chen',
-      role: 'user',
+      role: 'technical_builder',
       headline: 'Full-Stack Developer & AI Enthusiast',
+      sector: 'ai_ml',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -59,8 +63,9 @@ const seed = async () => {
       email: 'marcus@example.com',
       password: 'password123',
       name: 'Marcus Johnson',
-      role: 'user',
+      role: 'ecosystem_builder',
       headline: 'Product Manager & Startup Founder | HealthTech',
+      sector: 'healthcare',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -85,8 +90,9 @@ const seed = async () => {
       email: 'priya@example.com',
       password: 'password123',
       name: 'Priya Patel',
-      role: 'user',
+      role: 'domain_expert',
       headline: 'UX Designer & Researcher | Neuroscience Background',
+      sector: 'healthcare',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -112,8 +118,9 @@ const seed = async () => {
       email: 'alex@example.com',
       password: 'password123',
       name: 'Alex Rivera',
-      role: 'user',
+      role: 'technical_builder',
       headline: 'AI Engineer & Digital Therapeutics Founder',
+      sector: 'healthcare',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -140,8 +147,9 @@ const seed = async () => {
       email: 'emma@example.com',
       password: 'password123',
       name: 'Emma Watson',
-      role: 'user',
+      role: 'technical_builder',
       headline: 'MedTech Engineer & Hardware Prototyper',
+      sector: 'healthcare',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -166,8 +174,9 @@ const seed = async () => {
       email: 'james@example.com',
       password: 'password123',
       name: 'James Kim',
-      role: 'user',
+      role: 'domain_expert',
       headline: 'Data Scientist & Health Equity Researcher',
+      sector: 'healthcare',
       isVerified: true,
       isActive: true,
       onboardingComplete: true,
@@ -187,6 +196,37 @@ const seed = async () => {
       personalityTraits: ['analytical', 'empathetic', 'big_picture'],
       certifications: ['Certified Health Equity Specialist'],
       education: { degree: 'DrPH', school: 'Harvard', year: 2019 },
+    },
+    {
+      email: 'elena@example.com',
+      password: 'password123',
+      name: 'Elena Vasquez',
+      role: 'investor',
+      headline: 'Angel Investor & Health Innovation Fund Manager',
+      sector: 'healthcare',
+      isVerified: true,
+      isActive: true,
+      onboardingComplete: true,
+      bio: 'Early-stage investor backing digital health, AI and climate-health startups. Prefer teams with a clinical co-founder and clear regulatory path.',
+      skills: ['fundraising', 'startup', 'strategy', 'healthcare', 'due_diligence'],
+      primarySkills: ['fundraising', 'startup', 'due_diligence'],
+      secondarySkills: ['strategy', 'healthcare'],
+      intents: ['hire', 'collaborate'],
+      interests: ['healthtech', 'ai', 'biosensors', 'climate', 'digital_therapeutics'],
+      experienceLevel: 'senior',
+      yearsOfExperience: 15,
+      locationLat: 40.7128,
+      locationLng: -74.006,
+      locationCity: 'New York',
+      locationCountry: 'United States',
+      investmentFocus: ['healthcare', 'ai_ml', 'environment'],
+      investmentStages: ['prototype', 'mvp'],
+      ticketSizeMin: 50000,
+      ticketSizeMax: 1000000,
+      lookingForTeam: true,
+      availableForProjects: true,
+      personalityTraits: ['analytical', 'strategic', 'empathetic'],
+      education: { degree: 'MBA', school: 'INSEAD', year: 2012 },
     },
   ];
 
@@ -336,16 +376,54 @@ const seed = async () => {
   }
   console.log('Communities created');
 
+  const marcusId = emailToId['marcus@example.com'];
+  const org = await Organization.create({
+    owner: marcusId,
+    name: 'InnoLink Health Innovation Hub',
+    type: 'hub',
+    mission: 'Connecting health innovators, clinicians and funders to solve rural and underserved-care challenges.',
+    focusAreas: ['digital-therapeutics', 'biosensors', 'telemedicine'],
+    sectors: ['healthcare', 'ai_ml'],
+    website: 'https://innolink.example.com',
+    email: 'hello@innolink.example.com',
+    locationCity: 'San Francisco',
+    locationCountry: 'United States',
+    verified: true,
+    verificationStatus: 'verified',
+  });
+  await User.update({ organizationId: org.id }, { where: { id: marcusId } });
+  console.log(`Organization created: ${org.name}`);
+
+  const deadline = new Date();
+  deadline.setDate(deadline.getDate() + 60);
+  const opportunity = await Opportunity.create({
+    organization: org.id,
+    title: 'Health Innovation Challenge 2025',
+    description: 'Grants up to $150K for AI and IoT solutions improving access to care in underserved regions. Teams with a clinical co-founder preferred.',
+    type: 'funding',
+    eligibilityCriteria: ['registered team of 2+', 'prototype or MVP'],
+    sectors: ['healthcare', 'ai_ml'],
+    skillsNeeded: ['machine_learning', 'iot', 'python'],
+    stage: 'prototype',
+    status: 'open',
+    deadline,
+    capacity: 10,
+    fundingAmount: '$150,000',
+    tags: ['grant', 'digital_health', 'ai'],
+  });
+  console.log(`Opportunity created: ${opportunity.title}`);
+
   console.log('\n=== SEED COMPLETE ===');
   console.log('Portal: http://localhost:5173');
-  console.log('  Admin:         admin@innovationdating.com   / admin123');
-  console.log('  Developer:     sarah@example.com       / password123');
-  console.log('  PM/Founder:    marcus@example.com      / password123');
-  console.log('  UX Designer:   priya@example.com       / password123');
-  console.log('  AI Engineer:   alex@example.com        / password123');
-  console.log('  MedTech:       emma@example.com        / password123');
-  console.log('  DataScientist: james@example.com       / password123');
-  console.log(`\n${followPairs.length} follows, ${postsData.length} posts, ${projectsData.length} projects, ${communitiesData.length} communities created`);
+  console.log('  Admin:          admin@innoconnect.dev      / Admin@12345');
+  console.log('  Developer:      sarah@example.com       / password123  (technical_builder)');
+  console.log('  PM/Founder:     marcus@example.com      / password123  (ecosystem_builder)');
+  console.log('  UX Designer:    priya@example.com       / password123  (domain_expert)');
+  console.log('  AI Engineer:    alex@example.com        / password123  (technical_builder)');
+  console.log('  MedTech:        emma@example.com        / password123  (technical_builder)');
+  console.log('  DataScientist:  james@example.com       / password123  (domain_expert)');
+  console.log('  Investor:       elena@example.com       / password123  (investor)');
+  console.log(`\n${followPairs.length} follows, ${postsData.length} posts, ${projectsData.length} projects, ${communitiesData.length} communities, 1 organization, 1 opportunity created`);
 };
 
 export default seed;

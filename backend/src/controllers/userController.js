@@ -5,6 +5,7 @@ import Follow from '../models/Follow.js';
 import Post from '../models/Post.js';
 import { calculateAge } from '../utils/helpers.js';
 import { calculateInnovationScore, generatePersonalityProfile } from '../services/aiService.js';
+import { jsonbContains } from '../utils/jsonContains.js';
 
 export const updateProfile = async (req, res) => {
   try {
@@ -256,13 +257,13 @@ export const exploreUsers = async (req, res) => {
     if (availableForProjects === 'true') where.availableForProjects = true;
     if (investorOnly === 'true') where.role = 'investor';
 
-    if (skill) where[Op.and] = [
-      { [Op.or]: [
-        { skills: { [Op.contains]: [skill] } },
-        { primarySkills: { [Op.contains]: [skill] } },
-        { secondarySkills: { [Op.contains]: [skill] } },
-      ] },
-    ];
+    if (skill) {
+      where[Op.or] = [
+        jsonbContains('skills', skill),
+        jsonbContains('primarySkills', skill),
+        jsonbContains('secondarySkills', skill),
+      ];
+    }
 
     if (q) {
       where[Op.or] = where[Op.or] || [
@@ -293,7 +294,7 @@ export const requestVerification = async (req, res) => {
     const user = await User.findByPk(req.userId);
     if (user.isVerified) return res.status(400).json({ message: 'Already verified' });
 
-    const { documents = [], verificationNote = '' } = req.body;
+    const { documents = [], verificationNote = '', requestType = 'professional' } = req.body;
 
     const existing = await VerificationRequest.findOne({
       where: { userId: req.userId, status: 'pending' },
@@ -302,7 +303,7 @@ export const requestVerification = async (req, res) => {
 
     const request = await VerificationRequest.create({
       userId: req.userId,
-      requestType: 'user',
+      requestType: ['professional', 'credential'].includes(requestType) ? requestType : 'professional',
       documents,
       verificationNote,
       status: 'pending',

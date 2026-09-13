@@ -33,7 +33,7 @@ export const getFeed = async (req, res) => {
 
     if (hashtag) {
       const normalized = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
-      where.hashtags = { [Op.contains]: [normalized] };
+      where.hashtags = jsonbContains('hashtags', normalized);
     }
     if (type) where.type = type;
 
@@ -197,8 +197,9 @@ export const likePost = async (req, res) => {
     if (existing) {
       if (existing.reactionType === reactionType) {
         await existing.destroy();
-        await post.decrement('likeCount');
-        return res.json({ liked: false, reactionType: null, likeCount: post.likeCount - 1 });
+        const likeCount = Math.max(0, (await Post.findByPk(post.id)).likeCount - 1);
+        await post.update({ likeCount });
+        return res.json({ liked: false, reactionType: null, likeCount });
       }
       existing.reactionType = reactionType;
       await existing.save();
@@ -206,8 +207,8 @@ export const likePost = async (req, res) => {
     }
 
     await Like.create({ user: req.userId, targetType: 'post', targetId: req.params.id, reactionType });
-    await post.increment('likeCount');
-    res.json({ liked: true, reactionType, likeCount: post.likeCount + 1 });
+    const updated = await post.increment('likeCount');
+    res.json({ liked: true, reactionType, likeCount: updated.likeCount });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

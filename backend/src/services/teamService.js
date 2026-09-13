@@ -50,7 +50,10 @@ export const acceptRoleApplication = async (applicationId) => {
   await application.update({ status: 'accepted' });
   await roleDetail.update({ status: 'filled' });
 
+  if (idea.status === 'open') await idea.update({ status: 'in_discussion' });
+
   const team = await getOrCreateTeamForIdea(roleDetail.idea);
+  await addMember({ teamId: team.id, userId: idea.author, role: 'Project Lead' });
   await addMember({
     teamId: team.id,
     userId: application.applicant,

@@ -8,6 +8,7 @@ import { dispatch } from '../services/notificationService.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { success, created, fail, notFound } from '../utils/apiResponse.js';
 import { parsePagination, paginationMeta } from '../utils/pagination.js';
+import { jsonbContains } from '../utils/jsonContains.js';
 import { OPPORTUNITY_TYPE, OPPORTUNITY_STATUS, USER_ROLES } from '../config/constants.js';
 
 const PROFILE_FIELDS = ['id', 'name', 'headline', 'role', 'photos', 'sector', 'isVerified'];
@@ -56,8 +57,8 @@ export const listOpportunities = asyncHandler(async (req, res) => {
   if (type) where.type = type;
   if (status) where.status = status;
   else where.status = { [Op.ne]: OPPORTUNITY_STATUS.DRAFT };
-  if (sector) where.sectors = { [Op.contains]: [sector] };
-  if (skill) where.skillsNeeded = { [Op.contains]: [skill] };
+  if (sector) where.sectors = jsonbContains('sectors', sector);
+  if (skill) where.skillsNeeded = jsonbContains('skillsNeeded', skill);
   if (mine === 'true') {
     const org = await getManagedOrganization(req);
     if (!org) return success(res, [], 'No opportunities', paginationMeta(page, limit, 0));
