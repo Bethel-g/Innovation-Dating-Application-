@@ -105,7 +105,46 @@ npm run client     # Vite dev server on port 5173
 ```bash
 npm run test:backend     # Node.js native test runner
 npm run test:frontend    # Frontend tests
+npm run test:e2e         # Playwright end-to-end tests (backend + client + PostgreSQL)
 ```
+
+#### End-to-End Tests (Playwright)
+
+The E2E suite drives a real browser through the full stack: registration, login/logout,
+feed publishing, discovery/matches, profiles, and the admin panel. It auto-starts the
+backend and Vite client, waits for the database, seeds demo data, then executes.
+
+Prerequisites:
+
+1. PostgreSQL reachable at `postgres://postgres:postgres@127.0.0.1:5432/innovative_dating`
+   (the backend `.env` `DATABASE_URL`). The easiest way is Docker:
+
+   ```bash
+   npm run db:up      # docker compose up -d  — starts postgres:16 on 5432
+   ```
+
+2. `@playwright/test` installed and Chromium downloaded (run once after `npm install`):
+
+   ```bash
+   npx playwright install chromium
+   ```
+
+Run the suite:
+
+```bash
+npm run test:e2e                          # headless, all specs
+npm run test:e2e:debug                    # headed, watch tests run live
+npm run test:e2e:report                   # open the HTML report of the last run
+```
+
+Notes:
+
+- The database is re-seeded automatically at the start of every run so demo credentials
+  (`sarah@example.com / password123`, admin `admin@innoconnect.dev / Admin@12345`) are
+  always available.
+- Already-running servers are reused if present (`reuseExistingServer`), so a running
+  `npm run dev` works fine.
+- CI tip: `CI=1 npm run test:e2e` disables server reuse, adds retries, and serializes workers.
 
 ---
 

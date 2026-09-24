@@ -1,7 +1,8 @@
 import express from 'express';
 import {
   createIdea, getIdeas, getIdeaById, updateIdea, updateIdeaStatus, deleteIdea,
-  expressInterest, likeIdea, getSuggestedCollaborators,
+  expressInterest, joinIdea, likeIdea, getSuggestedCollaborators,
+  addIdeaComment, getIdeaComments,
   addOpenRole, listOpenRoles, updateOpenRole, deleteOpenRole,
 } from '../controllers/ideaController.js';
 import { authenticateUser } from '../middleware/auth.js';
@@ -41,6 +42,21 @@ router.post('/:id/interest', validate({
   params: { id: { type: 'uuid', required: true } },
   body: { note: { type: 'string', maxLen: 600 } },
 }), expressInterest);
+
+router.post('/:id/join', validate({
+  params: { id: { type: 'uuid', required: true } },
+  body: { note: { type: 'string', maxLen: 600 } },
+}), joinIdea);
+
+router.post('/:id/comments', validate({
+  params: { id: { type: 'uuid', required: true } },
+  body: {
+    text: { type: 'string', minLen: 1, maxLen: 2000 },
+    content: { type: 'string', minLen: 1, maxLen: 2000 },
+  },
+}), addIdeaComment);
+
+router.get('/:id/comments', validate({ params: { id: { type: 'uuid', required: true } } }), getIdeaComments);
 
 router.post('/:id/like', validate({ params: { id: { type: 'uuid', required: true } } }), likeIdea);
 router.get('/:id/suggested-collaborators', validate({ params: { id: { type: 'uuid', required: true } } }), getSuggestedCollaborators);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { userAPI } from '../services/api';
+import { userAPI, projectAPI, ideasAPI, communityAPI } from '../services/api';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -42,8 +42,33 @@ export default function Search() {
       if (filters.location) params.location = filters.location;
       if (filters.intent) params.intent = filters.intent;
 
-      const res = await userAPI.getNearby(params);
-      setResults(res.data);
+      let list = [];
+
+      if (activeCategory === 'projects') {
+        const res = await projectAPI.getAll();
+        list = (res.data?.projects || res.data?.data || res.data || [])
+          .filter(p => !filters.query || (p.title || '').toLowerCase().includes(filters.query.toLowerCase()))
+          .slice(0, 50)
+          .map(p => ({ id: p.id, kind: 'project', name: p.title, headline: p.tagline || '', description: p.description || '', skills: p.skillsNeeded || [] }));
+      } else if (activeCategory === 'ideas') {
+        const res = await ideasAPI.getAll();
+        list = (res.data?.data || res.data || [])
+          .filter(i => !filters.query || (i.title || '').toLowerCase().includes(filters.query.toLowerCase()))
+          .slice(0, 50)
+          .map(i => ({ id: i.id, kind: 'idea', name: i.title, headline: '', description: i.description || '', skills: [] }));
+      } else if (activeCategory === 'communities') {
+        const res = await communityAPI.getAll();
+        list = (res.data?.communities || res.data?.data || res.data || [])
+          .filter(c => !filters.query || (c.name || '').toLowerCase().includes(filters.query.toLowerCase()))
+          .slice(0, 50)
+          .map(c => ({ id: c.id, kind: 'community', name: c.name, headline: c.visibility || 'Community', description: c.description || '', skills: c.tags || [] }));
+      } else {
+        const res = await userAPI.getNearby(params);
+        const people = (res.data?.data || res.data || []);
+        list = people.map(p => ({ ...p, kind: 'people' }));
+      }
+
+      setResults(list);
     } catch (err) {
       toast.error('Failed to search');
     } finally {
@@ -51,7 +76,7 @@ export default function Search() {
     }
   };
 
-  useEffect(() => { handleSearch(); }, []);
+  useEffect(() => { handleSearch(); }, [activeCategory]);
 
   const toggleSkill = (skill) => {
     setFilters(prev => ({
@@ -164,37 +189,67 @@ export default function Search() {
         ) : results.length > 0 ? (
           <div className="results-grid">
             {results.map(prof => (
-              <Link to={`/profile/${prof.id}`} key={prof.id} className="card result-card card-hover">
-                <div className="result-header">
-                  <div className="avatar avatar-lg">
-                    {prof.photos?.[0]?.url ? <img src={prof.photos[0].url} alt="" /> : prof.name?.[0]}
-                  </div>
-                  {prof.isVerified && <span className="result-verified">✓</span>}
-                </div>
-                <div className="result-body">
-                  <h4 className="result-name">{prof.name}</h4>
-                  {prof.headline && <p className="result-headline">{prof.headline}</p>}
-                  {prof.experienceLevel && <p className="result-level">{prof.experienceLevel}</p>}
-                  {prof.location?.city && (
-                    <p className="result-location">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                      {prof.location.city}
-                    </p>
-                  )}
-                  <div className="skill-tags" style={{ marginTop: 8 }}>
-                    {prof.skills?.slice(0, 4).map(s => <span key={s} className="tag-skill">{s}</span>)}
-                    {prof.skills?.length > 4 && <span className="badge badge-neutral">+{prof.skills.length - 4}</span>}
-                  </div>
-                  {prof.intents?.length > 0 && (
-                    <div className="result-intents" style={{ marginTop: 8 }}>
-                      {prof.intents.slice(0, 3).map(i => <span key={i} className="badge badge-primary">{i}</span>)}
+              prof.kind === 'people' ? (
+                <Link to={`/profile/${prof.id}`} key={prof.id} className="card result-card card-hover">
+                  <div className="result-header">
+                    <div className="avatar avatar-lg">
+                      {prof.photos?.[0]?.url ? <img src={prof.photos[0].url} alt="" /> : prof.name?.[0]}
                     </div>
-                  )}
-                </div>
-                <div className="result-footer">
-                  <span className="btn btn-secondary btn-sm w-full">View Profile</span>
-                </div>
-              </Link>
+                    {prof.isVerified && <span className="result-verified">✓</span>}
+                  </div>
+                  <div className="result-body">
+                    <h4 className="result-name">{prof.name}</h4>
+                    {prof.headline && <p className="result-headline">{prof.headline}</p>}
+                    {prof.experienceLevel && <p className="result-level">{prof.experienceLevel}</p>}
+                    {prof.location?.city && (
+                      <p className="result-location">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {prof.location.city}
+                      </p>
+                    )}
+                    <div className="skill-tags" style={{ marginTop: 8 }}>
+                      {prof.skills?.slice(0, 4).map(s => <span key={s} className="tag-skill">{s}</span>)}
+                      {prof.skills?.length > 4 && <span className="badge badge-neutral">+{prof.skills.length - 4}</span>}
+                    </div>
+                    {prof.intents?.length > 0 && (
+                      <div className="result-intents" style={{ marginTop: 8 }}>
+                        {prof.intents.slice(0, 3).map(i => <span key={i} className="badge badge-primary">{i}</span>)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="result-footer">
+                    <span className="btn btn-secondary btn-sm w-full">View Profile</span>
+                  </div>
+                </Link>
+              ) : (
+                <Link
+                  to={prof.kind === 'project' ? '/projects' : prof.kind === 'idea' ? '/ideas' : '/search'}
+                  key={prof.id}
+                  className="card result-card card-hover"
+                  onClick={prof.kind === 'community' ? (e) => e.preventDefault() : undefined}
+                >
+                  <div className="result-header">
+                    <div className="avatar avatar-lg" style={{ background: 'linear-gradient(135deg, var(--primary), var(--secondary))', color: '#fff', fontWeight: 700 }}>
+                      {prof.kind === 'project' ? '📦' : prof.kind === 'idea' ? '💡' : '👥'}
+                    </div>
+                  </div>
+                  <div className="result-body">
+                    <h4 className="result-name">{prof.name}</h4>
+                    {prof.headline && <p className="result-headline">{prof.headline}</p>}
+                    {(prof.description || '').slice(0, 90) && <p className="result-location" style={{ marginTop: 6 }}>{(prof.description || '').slice(0, 90)}...</p>}
+                    {prof.skills?.length > 0 && (
+                      <div className="skill-tags" style={{ marginTop: 8 }}>
+                        {prof.skills.slice(0, 4).map(s => <span key={s} className="tag-skill">{s}</span>)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="result-footer">
+                    <span className="btn btn-primary btn-sm w-full">
+                      {prof.kind === 'project' ? 'View Projects' : prof.kind === 'idea' ? 'View Ideas' : 'Community'}
+                    </span>
+                  </div>
+                </Link>
+              )
             ))}
           </div>
         ) : (

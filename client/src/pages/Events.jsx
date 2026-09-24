@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { eventsAPI } from '../services/api';
 
 const EVENT_TYPES = [
   { id: 'all', label: 'All Events', icon: '📅' },
@@ -12,55 +13,10 @@ const EVENT_TYPES = [
   { id: 'meetup', label: 'Community Meetup', icon: '☕' },
 ];
 
-const SAMPLE_EVENTS = [
-  {
-    id: 1, title: 'AI in Healthcare Summit', type: 'webinar', date: 'Aug 25, 2026', time: '2:00 PM EAT',
-    location: 'Virtual (Zoom)', description: 'Join leading AI researchers and healthcare professionals to discuss the future of AI-powered diagnostics and treatment.',
-    speakers: ['Dr. Aisha Mohammed', 'James Okafor', 'Sara Chen'],
-    attendees: 234, maxAttendees: 500, isOnline: true, isFree: true,
-    tags: ['AI', 'Healthcare', 'Innovation'], organizer: 'TechForHealth',
-  },
-  {
-    id: 2, title: 'Startup Pitch Night — Addis Ababa', type: 'pitch', date: 'Sep 5, 2026', time: '6:00 PM EAT',
-    location: 'Innovation Hub, Addis Ababa', description: 'Watch 10 early-stage startups pitch to a panel of VCs and angel investors. Networking session follows.',
-    speakers: ['Hosted by Ethiopia Ventures'],
-    attendees: 89, maxAttendees: 150, isOnline: false, isFree: false, price: '$15',
-    tags: ['Startups', 'Funding', 'Networking'], organizer: 'Ethiopia Ventures',
-  },
-  {
-    id: 3, title: 'React & Beyond — Hackathon', type: 'hackathon', date: 'Sep 12-13, 2026', time: '9:00 AM - 6:00 PM',
-    location: 'Nairobi Tech Hub, Kenya', description: '48-hour hackathon building innovative React applications. Prizes worth $5,000!',
-    speakers: ['Mentors from Meta, Google, Andela'],
-    attendees: 156, maxAttendees: 200, isOnline: false, isFree: true,
-    tags: ['React', 'Hackathon', 'Prizes'], organizer: 'NairobiJS',
-  },
-  {
-    id: 4, title: 'Career Growth in Tech — Panel Discussion', type: 'mentorship', date: 'Sep 18, 2026', time: '4:00 PM EAT',
-    location: 'Virtual (Zoom)', description: 'Learn from senior engineers and leaders about navigating your tech career from junior to staff level.',
-    speakers: ['Priya Sharma', 'Fatima Al-Rashid', 'Michael Chen'],
-    attendees: 312, maxAttendees: 1000, isOnline: true, isFree: true,
-    tags: ['Career', 'Mentorship', 'Growth'], organizer: 'Women in Tech Africa',
-  },
-  {
-    id: 5, title: 'Lagos Tech Meetup — Monthly', type: 'meetup', date: 'Sep 22, 2026', time: '5:30 PM WAT',
-    location: 'Co-Creation Hub, Lagos', description: 'Monthly community meetup for developers, designers, and tech enthusiasts. Lightning talks + networking.',
-    speakers: ['Community Speakers'],
-    attendees: 67, maxAttendees: 100, isOnline: false, isFree: true,
-    tags: ['Community', 'Networking', 'Lagos'], organizer: 'Lagos Tech Community',
-  },
-  {
-    id: 6, title: 'Building Your First SaaS — Workshop', type: 'webinar', date: 'Oct 1, 2026', time: '10:00 AM EAT',
-    location: 'Virtual (Zoom)', description: 'Hands-on workshop covering SaaS architecture, billing, deployment, and scaling strategies.',
-    speakers: ['Kwame Asante'],
-    attendees: 178, maxAttendees: 300, isOnline: true, isFree: false, price: '$25',
-    tags: ['SaaS', 'Workshop', 'Architecture'], organizer: 'SaaS Academy Africa',
-  },
-];
-
 function EventCard({ event, onJoin, isRegistered }) {
   const [showDetail, setShowDetail] = useState(false);
-  const spotsLeft = event.maxAttendees - event.attendees;
-  const spotsPercent = (event.attendees / event.maxAttendees) * 100;
+  const spotsLeft = event.maxAttendees ? Math.max(0, event.maxAttendees - event.attendees) : null;
+  const spotsPercent = event.maxAttendees ? Math.min(100, Math.round((event.attendees / event.maxAttendees) * 100)) : 0;
 
   return (
     <>
@@ -82,7 +38,7 @@ function EventCard({ event, onJoin, isRegistered }) {
           <span className="event-meta-item">{event.isOnline ? '💻' : '📍'} {event.location}</span>
         </div>
 
-        <p className="event-desc">{event.description.substring(0, 120)}...</p>
+        <p className="event-desc">{(event.description || '').substring(0, 120)}{(event.description || '').length > 120 ? '...' : ''}</p>
 
         <div className="event-tags">
           {event.tags.map(tag => <span key={tag} className="tag-skill tag-xs">{tag}</span>)}
@@ -92,7 +48,7 @@ function EventCard({ event, onJoin, isRegistered }) {
           <div className="spots-bar">
             <div className="spots-fill" style={{ width: `${spotsPercent}%` }} />
           </div>
-          <span className="spots-text">{spotsLeft} spots left</span>
+          <span className="spots-text">{spotsLeft !== null ? `${spotsLeft} spots left` : ''}</span>
         </div>
 
         <div className="event-card-footer">
@@ -169,7 +125,7 @@ function EventCard({ event, onJoin, isRegistered }) {
                 <div className="spots-bar lg">
                   <div className="spots-fill" style={{ width: `${spotsPercent}%` }} />
                 </div>
-                <span>{event.attendees}/{event.maxAttendees} spots filled</span>
+                <span>{event.maxAttendees ? `${event.attendees}/${event.maxAttendees} spots filled` : `${event.attendees} attending`}</span>
               </div>
               <button
                 className={`btn ${isRegistered ? 'btn-outline' : 'btn-primary'} btn-lg`}
@@ -187,29 +143,90 @@ function EventCard({ event, onJoin, isRegistered }) {
 
 export default function Events() {
   const { user } = useAuth();
-  const [events, setEvents] = useState(SAMPLE_EVENTS);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('browse');
   const [activeType, setActiveType] = useState('all');
   const [registeredEvents, setRegisteredEvents] = useState(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [hostForm, setHostForm] = useState({
+    title: '', type: 'networking', date: '', time: '', location: '', maxAttendees: '',
+    description: '', isFree: true, price: '', tags: '', isOnline: false,
+  });
+  const [hosting, setHosting] = useState(false);
 
-  const handleJoin = (eventId) => {
-    setRegisteredEvents(prev => {
-      const next = new Set(prev);
-      if (next.has(eventId)) {
-        next.delete(eventId);
-        toast.success('Unregistered from event');
-      } else {
-        next.add(eventId);
-        toast.success('Registered for event!');
-      }
-      return next;
-    });
+  const fetchEvents = async (type) => {
+    setLoading(true);
+    try {
+      const res = await eventsAPI.getAll({ type: type === 'all' ? 'all' : type });
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setEvents(list);
+      setRegisteredEvents(new Set(list.filter(e => e.isRegistered).map(e => e.id)));
+    } catch (err) {
+      if (err.response?.status !== 401) toast.error('Failed to load events');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEvents(activeType);
+  }, [activeType]);
+
+  const handleJoin = async (eventId) => {
+    const wasRegistered = registeredEvents.has(eventId);
+    try {
+      const res = await eventsAPI.register(eventId);
+      const nowRegistered = res.data?.registered ?? !wasRegistered;
+      setRegisteredEvents(prev => {
+        const next = new Set(prev);
+        if (nowRegistered) next.add(eventId);
+        else next.delete(eventId);
+        return next;
+      });
+      setEvents(prev => prev.map(e => (e.id === eventId ? { ...e, isRegistered: nowRegistered, attendees: (e.attendees || 0) + (nowRegistered ? 1 : -1) } : e)));
+      toast.success(nowRegistered ? 'Registered for event!' : 'Unregistered from event');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not update registration');
+    }
+  };
+
+  const handleHost = async () => {
+    if (!hostForm.title) {
+      toast.error('Event title is required');
+      return;
+    }
+    setHosting(true);
+    try {
+      await eventsAPI.create({
+        title: hostForm.title,
+        type: hostForm.type,
+        date: hostForm.date,
+        time: hostForm.time,
+        location: hostForm.location,
+        maxAttendees: hostForm.maxAttendees ? parseInt(hostForm.maxAttendees) : null,
+        description: hostForm.description,
+        isOnline: hostForm.isOnline || /virtual|online/i.test(hostForm.location),
+        isFree: hostForm.isFree,
+        price: hostForm.isFree ? null : hostForm.price,
+        tags: hostForm.tags.split(',').map(t => t.trim()).filter(Boolean),
+      });
+      toast.success('Event created successfully!');
+      setHostForm({ title: '', type: 'networking', date: '', time: '', location: '', maxAttendees: '', description: '', isFree: true, price: '', tags: '', isOnline: false });
+      setActiveTab('browse');
+      fetchEvents(activeType);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to create event');
+    } finally {
+      setHosting(false);
+    }
   };
 
   const filteredEvents = events
     .filter(e => activeType === 'all' || e.type === activeType)
-    .filter(e => !searchQuery || e.title.toLowerCase().includes(searchQuery.toLowerCase()) || e.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+    .filter(e => !searchQuery || (e.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (e.tags || []).some(t => String(t).toLowerCase().includes(searchQuery.toLowerCase())));
+
+  const featuredEvent = events.find(e => e.isFeatured) || events[0];
 
   return (
     <div className="events-page page-transition">
@@ -247,22 +264,33 @@ export default function Events() {
             ))}
           </div>
 
-          <div className="featured-event card">
-            <div className="featured-badge">⭐ Featured</div>
-            <div className="featured-content">
-              <h2>AI in Healthcare Summit</h2>
-              <p>The premier event exploring AI's impact on healthcare across Africa</p>
-              <div className="featured-meta">
-                <span>📅 Aug 25, 2026</span>
-                <span>💻 Virtual</span>
-                <span>👥 234 registered</span>
+          {featuredEvent && (
+            <div className="featured-event card">
+              <div className="featured-badge">⭐ Featured</div>
+              <div className="featured-content">
+                <h2>{featuredEvent.title}</h2>
+                <p>{(featuredEvent.description || '').substring(0, 140)}{(featuredEvent.description || '').length > 140 ? '...' : ''}</p>
+                <div className="featured-meta">
+                  <span>📅 {featuredEvent.date}</span>
+                  <span>{featuredEvent.isOnline ? '💻 Virtual' : '📍 ' + featuredEvent.location}</span>
+                  <span>👥 {featuredEvent.attendees || 0} registered</span>
+                </div>
+                <button className="btn btn-primary" onClick={() => handleJoin(featuredEvent.id)}>
+                  {registeredEvents.has(featuredEvent.id) ? 'Registered ✓' : 'Register Free'}
+                </button>
               </div>
-              <button className="btn btn-primary" onClick={() => handleJoin(1)}>
-                {registeredEvents.has(1) ? 'Registered ✓' : 'Register Free'}
-              </button>
             </div>
-          </div>
+          )}
 
+          {loading && (
+            <div className="empty-state">
+              <div className="empty-icon">⏳</div>
+              <h3>Loading events...</h3>
+            </div>
+          )}
+
+          {!loading && (
+          <>
           <div className="events-grid">
             {filteredEvents.map(event => (
               <EventCard
@@ -280,6 +308,8 @@ export default function Events() {
               <h3>No events found</h3>
               <p>Try a different category or search term</p>
             </div>
+          )}
+          </>
           )}
         </div>
       )}
@@ -309,52 +339,66 @@ export default function Events() {
             <p className="host-desc">Share your knowledge, host a meetup, or organize a hackathon</p>
             <div className="form-group">
               <label>Event Title</label>
-              <input placeholder="e.g., AI Workshop for Beginners" />
+              <input value={hostForm.title} onChange={e => setHostForm({ ...hostForm, title: e.target.value })} placeholder="e.g., AI Workshop for Beginners" />
             </div>
             <div className="form-group">
               <label>Event Type</label>
-              <select>
+              <select value={hostForm.type} onChange={e => setHostForm({ ...hostForm, type: e.target.value })}>
                 {EVENT_TYPES.filter(t => t.id !== 'all').map(t => <option key={t.id} value={t.id}>{t.icon} {t.label}</option>)}
               </select>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Date</label>
-                <input type="date" />
+                <input type="date" value={hostForm.date} onChange={e => setHostForm({ ...hostForm, date: e.target.value })} />
               </div>
               <div className="form-group">
                 <label>Time</label>
-                <input type="time" />
+                <input type="time" value={hostForm.time} onChange={e => setHostForm({ ...hostForm, time: e.target.value })} />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Location</label>
-                <input placeholder="e.g., Virtual or physical address" />
+                <input value={hostForm.location} onChange={e => setHostForm({ ...hostForm, location: e.target.value })} placeholder="e.g., Virtual or physical address" />
               </div>
               <div className="form-group">
                 <label>Max Attendees</label>
-                <input type="number" placeholder="e.g., 100" />
+                <input type="number" value={hostForm.maxAttendees} onChange={e => setHostForm({ ...hostForm, maxAttendees: e.target.value })} placeholder="e.g., 100" />
               </div>
             </div>
             <div className="form-group">
               <label>Description</label>
-              <textarea rows={5} placeholder="Describe your event..." />
+              <textarea rows={5} value={hostForm.description} onChange={e => setHostForm({ ...hostForm, description: e.target.value })} placeholder="Describe your event..." />
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Ticket Price</label>
-                <select>
-                  <option>Free</option>
-                  <option>Paid</option>
+                <select value={hostForm.isFree ? 'free' : 'paid'} onChange={e => setHostForm({ ...hostForm, isFree: e.target.value === 'free' })}>
+                  <option value="free">Free</option>
+                  <option value="paid">Paid</option>
                 </select>
               </div>
-              <div className="form-group">
-                <label>Tags</label>
-                <input placeholder="e.g., AI, Workshop, Free (comma separated)" />
-              </div>
+              {!hostForm.isFree && (
+                <div className="form-group">
+                  <label>Price</label>
+                  <input value={hostForm.price} onChange={e => setHostForm({ ...hostForm, price: e.target.value })} placeholder="e.g., $25" />
+                </div>
+              )}
             </div>
-            <button className="btn btn-primary btn-lg">Create Event</button>
+            <div className="form-group">
+              <label>Tags</label>
+              <input value={hostForm.tags} onChange={e => setHostForm({ ...hostForm, tags: e.target.value })} placeholder="e.g., AI, Workshop, Free (comma separated)" />
+            </div>
+            <div className="form-group">
+              <label className="remote-toggle">
+                <input type="checkbox" checked={hostForm.isOnline} onChange={e => setHostForm({ ...hostForm, isOnline: e.target.checked })} />
+                <span>Online event</span>
+              </label>
+            </div>
+            <button className="btn btn-primary btn-lg" onClick={handleHost} disabled={hosting}>
+              {hosting ? 'Creating...' : 'Create Event'}
+            </button>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@ import { Op } from 'sequelize';
 import Idea from '../models/Idea.js';
 import User from '../models/User.js';
 import Like from '../models/Like.js';
+import IdeaComment from '../models/IdeaComment.js';
 import TeamRole from '../models/TeamRole.js';
 import Team from '../models/Team.js';
 import TeamMember from '../models/TeamMember.js';
@@ -81,6 +82,7 @@ export const getIdeaById = asyncHandler(async (req, res) => {
     include: [
       { model: User, as: 'authorDetail', attributes: { exclude: ['password'] } },
       { model: TeamRole, as: 'openRoles' },
+      { model: IdeaComment, as: 'comments', include: [{ model: User, as: 'authorProfile', attributes: ['id', 'name', 'photos', 'headline'] }] },
       { model: Team, as: 'team', include: [{ model: TeamMember, as: 'members', include: [{ model: User, as: 'profile', attributes: ['id', 'name', 'headline', 'role', 'photos'] }] }] },
     ],
   });
@@ -152,6 +154,64 @@ export const expressInterest = asyncHandler(async (req, res) => {
   success(res, { connectionId: connection.id, status: connection.status }, already
     ? 'You already expressed interest in this idea'
     : 'Interest sent to the idea owner');
+});
+
+export const joinIdea = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  if (idea.author === req.userId) return fail(res, 400, 'You cannot join your own idea');
+
+  const { connection, already } = await sendConnectionRequest({
+    requester: req.userId,
+    recipient: idea.author,
+    ideaId: idea.id,
+    note: req.body.note || req.body.message || 'Wants to join your team',
+  });
+
+  if (!already) await notifyConnectionRequest(connection);
+
+  success(res, { connectionId: connection.id, status: connection.status }, already
+    ? 'Join request already sent'
+    : 'Join request sent to the idea owner');
+});
+
+export const addIdeaComment = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  const body = (req.body.text || req.body.content || '').trim();
+  if (!body) return fail(res, 400, 'Comment cannot be empty');
+
+  const comment = await IdeaComment.create({ idea: idea.id, author: req.userId, content: body });
+  await idea.update({ commentCount: (idea.commentCount || 0) + 1 });
+
+  if (idea.author !== req.userId) {
+    await createNotification({
+      user: idea.author,
+      type: 'comment',
+      title: 'New comment on your idea',
+      body: `Someone commented on "${idea.title}"`,
+      data: { ideaId: idea.id },
+    });
+  }
+
+  const full = await IdeaComment.findByPk(comment.id, {
+    include: [{ model: User, as: 'authorProfile', attributes: ['id', 'name', 'photos', 'headline'] }],
+  });
+  created(res, full, 'Comment added');
+});
+
+export const getIdeaComments = asyncHandler(async (req, res) => {
+  const idea = await Idea.findByPk(req.params.id);
+  if (!idea) return notFound(res, 'Idea');
+
+  const comments = await IdeaComment.findAll({
+    where: { idea: idea.id },
+    order: [['createdAt', 'ASC']],
+    include: [{ model: User, as: 'authorProfile', attributes: ['id', 'name', 'photos', 'headline'] }],
+  });
+  success(res, comments, 'Comments fetched');
 });
 
 export const likeIdea = asyncHandler(async (req, res) => {

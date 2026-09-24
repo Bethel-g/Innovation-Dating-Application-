@@ -27,6 +27,7 @@ import AdminNotifications from './admin/Notifications';
 import AdminProjects from './admin/Projects';
 import AdminComments from './admin/Comments';
 import AdminCommunities from './admin/Communities';
+import AdminPosts from './admin/Posts';
 import { MaturityStyles } from './components/ui/MaturityComponents';
 import { I18nProvider } from './context/I18nContext';
 
@@ -112,6 +113,7 @@ export default function App() {
           <Route path="/admin/projects" element={<AdminRoute><AdminProjects /></AdminRoute>} />
           <Route path="/admin/comments" element={<AdminRoute><AdminComments /></AdminRoute>} />
           <Route path="/admin/communities" element={<AdminRoute><AdminCommunities /></AdminRoute>} />
+          <Route path="/admin/posts" element={<AdminRoute><AdminPosts /></AdminRoute>} />
         </Routes>
       </main>
 

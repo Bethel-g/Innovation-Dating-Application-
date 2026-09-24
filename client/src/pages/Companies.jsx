@@ -1,44 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { organizationsAPI, jobsAPI } from '../services/api';
 
-const SAMPLE_COMPANIES = [
-  {
-    id: 1, name: 'TechCorp Africa', industry: 'Technology', size: '500-1000', founded: 2018,
-    location: 'Addis Ababa, Ethiopia', website: 'techcorpafrica.com',
-    description: 'Leading African tech company building AI-powered solutions for healthcare, finance, and education across the continent.',
-    followers: 12340, employees: 567, posts: 89,
-    tags: ['AI', 'Healthcare', 'FinTech'], logo: 'T', isFollowing: false,
-  },
-  {
-    id: 2, name: 'GreenTech Solutions', industry: 'Sustainability', size: '100-500', founded: 2020,
-    location: 'Nairobi, Kenya', website: 'greentech.co.ke',
-    description: 'Building sustainable technology solutions to combat climate change in Africa. Carbon tracking, renewable energy optimization.',
-    followers: 8920, employees: 234, posts: 56,
-    tags: ['Climate Tech', 'Clean Energy', 'Carbon Tracking'], logo: 'G', isFollowing: true,
-  },
-  {
-    id: 3, name: 'HealthAI', industry: 'Healthcare', size: '200-500', founded: 2019,
-    location: 'Lagos, Nigeria', website: 'healthai.ng',
-    description: 'AI-powered diagnostics and healthcare management system serving rural communities across West Africa.',
-    followers: 6780, employees: 189, posts: 45,
-    tags: ['AI', 'Healthcare', 'Diagnostics'], logo: 'H', isFollowing: false,
-  },
-  {
-    id: 4, name: 'EduTech Africa', industry: 'Education', size: '50-200', founded: 2021,
-    location: 'Addis Ababa, Ethiopia', website: 'edutech.africa',
-    description: 'Making quality education accessible to millions of African students through technology.',
-    followers: 5430, employees: 87, posts: 34,
-    tags: ['EdTech', 'E-Learning', 'STEM'], logo: 'E', isFollowing: false,
-  },
-  {
-    id: 5, name: 'CloudAfrica', industry: 'Cloud Infrastructure', size: '100-500', founded: 2017,
-    location: 'Lagos, Nigeria', website: 'cloudafrica.io',
-    description: 'Pan-African cloud infrastructure provider powering the next generation of African tech companies.',
-    followers: 15600, employees: 345, posts: 112,
-    tags: ['Cloud', 'Infrastructure', 'DevOps'], logo: 'C', isFollowing: true,
-  },
-];
+const FOLLOW_KEY = 'followedOrgs';
+
+function mapOrg(org, followed) {
+  const sectors = org.sectors || [];
+  const focusAreas = org.focusAreas || [];
+  return {
+    id: org.id,
+    name: org.name,
+    industry: (sectors[0] || org.type || 'Organization'),
+    size: `${(org.members || []).length} members`,
+    founded: org.createdAt ? new Date(org.createdAt).getFullYear() : null,
+    location: [org.locationCity, org.locationCountry].filter(Boolean).join(', ') || 'Remote',
+    website: org.website || '',
+    description: org.mission || 'No description provided yet.',
+    followers: (org.members || []).length,
+    employees: (org.members || []).length,
+    posts: 0,
+    tags: focusAreas.length ? focusAreas : (sectors.length ? sectors : ['organization']),
+    logo: (org.name || 'O')[0],
+    isFollowing: !!followed,
+    type: org.type,
+    verified: org.verified,
+    ownerProfile: org.ownerProfile,
+    members: org.members || [],
+  };
+}
 
 function CompanyCard({ company, onFollow, onClick }) {
   return (
@@ -48,11 +38,11 @@ function CompanyCard({ company, onFollow, onClick }) {
           {company.logo}
         </div>
         <div className="company-info">
-          <h3>{company.name}</h3>
-          <p className="company-industry">{company.industry} · {company.size} employees</p>
+          <h3>{company.name}{company.verified && <span title="Verified" className="company-verified">✓</span>}</h3>
+          <p className="company-industry">{company.industry} · {company.size}</p>
         </div>
       </div>
-      <p className="company-desc">{company.description.substring(0, 120)}...</p>
+      <p className="company-desc">{(company.description || '').substring(0, 120)}{(company.description || '').length > 120 ? '...' : ''}</p>
       <div className="company-tags">
         {company.tags.map(tag => <span key={tag} className="tag-skill tag-xs">{tag}</span>)}
       </div>
@@ -76,6 +66,28 @@ function CompanyCard({ company, onFollow, onClick }) {
 
 function CompanyDetail({ company, onClose, onFollow }) {
   const [activeTab, setActiveTab] = useState('about');
+  const [companyJobs, setCompanyJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'jobs') return;
+    let cancelled = false;
+    const load = async () => {
+      setLoadingJobs(true);
+      try {
+        const res = await jobsAPI.getAll();
+        const jobs = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+        if (!cancelled) setCompanyJobs(jobs.filter(j => (j.company || '').toLowerCase() === (company.name || '').toLowerCase()));
+      } catch (err) {
+        if (!cancelled) toast.error('Failed to load jobs');
+      } finally {
+        if (!cancelled) setLoadingJobs(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [activeTab, company.name]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal modal-xl" onClick={e => e.stopPropagation()}>
@@ -84,11 +96,10 @@ function CompanyDetail({ company, onClose, onFollow }) {
             {company.logo}
           </div>
           <div className="company-detail-info">
-            <h2>{company.name}</h2>
-            <p>{company.industry} · {company.location} · {company.size} employees</p>
+            <h2>{company.name}{company.verified && <span title="Verified" className="company-verified">✓</span>}</h2>
+            <p>{company.industry} · {company.location} · {company.size}</p>
             <div className="company-detail-stats">
-              <span>👥 {formatNum(company.followers)} followers</span>
-              <span>🏢 {company.employees} employees</span>
+              <span>👥 {formatNum(company.followers)} members</span>
               <span>📝 {company.posts} posts</span>
             </div>
           </div>
@@ -115,9 +126,9 @@ function CompanyDetail({ company, onClose, onFollow }) {
             <h3>Industry</h3>
             <p>{company.industry}</p>
             <h3>Founded</h3>
-            <p>{company.founded}</p>
+            <p>{company.founded || 'N/A'}</p>
             <h3>Website</h3>
-            <p>{company.website}</p>
+            <p>{company.website ? <a href={company.website} target="_blank" rel="noopener noreferrer">{company.website}</a> : 'N/A'}</p>
             <h3>Specialties</h3>
             <div className="skill-tags">{company.tags.map(tag => <span key={tag} className="tag-skill">{tag}</span>)}</div>
           </div>
@@ -125,19 +136,56 @@ function CompanyDetail({ company, onClose, onFollow }) {
 
         {activeTab === 'jobs' && (
           <div className="company-jobs">
-            <div className="empty-state" style={{ padding: '40px 20px' }}>
-              <div className="empty-icon">💼</div>
-              <h3>Open Positions</h3>
-              <p>Check back later for job openings at {company.name}</p>
-            </div>
+            {loadingJobs && <div className="empty-state" style={{ padding: '40px 20px' }}><div className="empty-icon">⏳</div><h3>Loading roles...</h3></div>}
+            {!loadingJobs && companyJobs.length === 0 && (
+              <div className="empty-state" style={{ padding: '40px 20px' }}>
+                <div className="empty-icon">💼</div>
+                <h3>No Open Positions</h3>
+                <p>Check back later for job openings at {company.name}</p>
+              </div>
+            )}
+            {!loadingJobs && companyJobs.length > 0 && (
+              <div className="jobs-grid">
+                {companyJobs.map(job => (
+                  <div key={job.id} className="job-card card">
+                    <div className="job-card-header">
+                      <div className="job-header-info">
+                        <h3>{job.title}</h3>
+                        <p className="job-company">{job.company}</p>
+                      </div>
+                    </div>
+                    <div className="job-meta">
+                      <span>📍 {job.location}</span>
+                      <span>💼 {job.type}</span>
+                      <span>💰 {job.salary}</span>
+                    </div>
+                    <p className="job-description">{(job.description || '').substring(0, 140)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === 'employees' && (
           <div className="company-employees">
-            <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: 40 }}>
-              {company.employees} employees work at {company.name}
-            </p>
+            {company.members && company.members.length > 0 ? (
+              <div className="employees-grid">
+                {company.members.map(m => (
+                  <div key={m.id} className="employee-chip">
+                    <div className="speaker-avatar">{m.name?.[0]}</div>
+                    <div>
+                      <strong>{m.name}</strong>
+                      <span>{m.role}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ color: 'var(--text-light)', textAlign: 'center', padding: 40 }}>
+                {company.employees} members work at {company.name}
+              </p>
+            )}
           </div>
         )}
 
@@ -171,24 +219,65 @@ function formatNum(n) {
   return n;
 }
 
+function loadFollowed() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FOLLOW_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveFollowed(set) {
+  localStorage.setItem(FOLLOW_KEY, JSON.stringify([...set]));
+}
+
 export default function Companies() {
   const { user } = useAuth();
-  const [companies, setCompanies] = useState(SAMPLE_COMPANIES);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('browse');
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterIndustry, setFilterIndustry] = useState('all');
+  const [followed, setFollowed] = useState(loadFollowed);
 
-  const industries = ['all', ...new Set(companies.map(c => c.industry))];
+  const fetchCompanies = async () => {
+    setLoading(true);
+    try {
+      const res = await organizationsAPI.getAll();
+      const list = res.data?.data || res.data || [];
+      setCompanies(list.map(org => mapOrg(org, followed.has(org.id))));
+    } catch (err) {
+      if (err.response?.status !== 401) toast.error('Failed to load companies');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  const industries = ['all', ...new Set(companies.map(c => c.industry).filter(Boolean))];
 
   const toggleFollow = (companyId) => {
-    setCompanies(prev => prev.map(c => c.id === companyId ? { ...c, isFollowing: !c.isFollowing, followers: c.isFollowing ? c.followers - 1 : c.followers + 1 } : c));
-    toast.success('Updated!');
+    setFollowed(prev => {
+      const next = new Set(prev);
+      const isFollowing = next.has(companyId);
+      if (isFollowing) next.delete(companyId);
+      else next.add(companyId);
+      saveFollowed(next);
+      setCompanies(prevCompanies => prevCompanies.map(c => c.id === companyId ? { ...c, isFollowing: !isFollowing, followers: isFollowing ? c.followers - 1 : c.followers + 1 } : c));
+      toast.success(isFollowing ? 'Unfollowed company' : 'Following company!');
+      return next;
+    });
   };
 
   const filtered = companies
     .filter(c => filterIndustry === 'all' || c.industry === filterIndustry)
     .filter(c => !searchQuery || c.name.toLowerCase().includes(searchQuery.toLowerCase()) || c.industry.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  const followingList = companies.filter(c => followed.has(c.id));
 
   return (
     <div className="companies-page page-transition">
@@ -202,7 +291,7 @@ export default function Companies() {
           <span className="tab-icon">🏢</span> Browse
         </button>
         <button className={`tab ${activeTab === 'following' ? 'active' : ''}`} onClick={() => setActiveTab('following')}>
-          <span className="tab-icon">❤️</span> Following ({companies.filter(c => c.isFollowing).length})
+          <span className="tab-icon">❤️</span> Following ({followingList.length})
         </button>
       </div>
 
@@ -220,13 +309,22 @@ export default function Companies() {
             </select>
           </div>
 
+          {loading && (
+            <div className="empty-state">
+              <div className="empty-icon">⏳</div>
+              <h3>Loading companies...</h3>
+            </div>
+          )}
+
+          {!loading && (
           <div className="companies-grid">
             {filtered.map(company => (
               <CompanyCard key={company.id} company={company} onFollow={toggleFollow} onClick={setSelectedCompany} />
             ))}
           </div>
+          )}
 
-          {filtered.length === 0 && (
+          {!loading && filtered.length === 0 && (
             <div className="empty-state">
               <div className="empty-icon">🏢</div>
               <h3>No companies found</h3>
@@ -238,10 +336,10 @@ export default function Companies() {
 
       {activeTab === 'following' && (
         <div className="companies-grid">
-          {companies.filter(c => c.isFollowing).map(company => (
+          {followingList.map(company => (
             <CompanyCard key={company.id} company={company} onFollow={toggleFollow} onClick={setSelectedCompany} />
           ))}
-          {companies.filter(c => c.isFollowing).length === 0 && (
+          {followingList.length === 0 && (
             <div className="empty-state">
               <div className="empty-icon">🏢</div>
               <h3>Not following any companies yet</h3>
@@ -300,6 +398,11 @@ export default function Companies() {
         .company-about h3 { font-size: 16px; margin-bottom: 8px; margin-top: 16px; }
         .company-about h3:first-child { margin-top: 0; }
         .company-about p { font-size: 14px; color: var(--text-light); line-height: 1.6; }
+        .company-verified { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-left: 6px; border-radius: 50%; background: #22c55e; color: #fff; font-size: 11px; }
+        .employees-grid { display: flex; flex-wrap: wrap; gap: 12px; padding: 16px 0; }
+        .employee-chip { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-secondary); border-radius: var(--radius); min-width: 200px; }
+        .employee-chip strong { display: block; font-size: 13px; }
+        .employee-chip span { font-size: 12px; color: var(--text-light); }
 
         .empty-icon { font-size: 48px; margin-bottom: 12px; }
         .empty-state { text-align: center; padding: 60px 20px; }

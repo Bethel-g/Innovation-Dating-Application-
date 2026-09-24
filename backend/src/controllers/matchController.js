@@ -152,6 +152,25 @@ export const getDailySuggestions = async (req, res) => {
   }
 };
 
+export const getHealthSector = async (req, res) => {
+  try {
+    const matches = await findPotentialMatches(req.userId, 50);
+    const healthMatches = matches
+      .filter((m) => m.user?.sector === 'healthcare'
+        || (m.user?.healthSpecialty && m.user.healthSpecialty !== 'other')
+        || (m.user?.innovationFocus && String(m.user.innovationFocus).includes('health')))
+      .map((m) => {
+        const currentUser = req.user;
+        const insight = generateMatchInsight(currentUser, m.user, m.compatibilityScore);
+        return { user: m.user.toJSON(), compatibilityScore: m.compatibilityScore, insight };
+      });
+
+    res.json(healthMatches);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 export const getMatchInsight = async (req, res) => {
   try {
     const match = await Match.findByPk(req.params.matchId);

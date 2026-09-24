@@ -12,6 +12,7 @@ import {
   getRoles, updateUserRole,
   getVerificationRequests, resolveVerificationRequest,
   getInnovationAnalytics,
+  getAdminMe, adminLogout,
 } from '../controllers/adminController.js';
 import { authenticateUser, requireAdmin, requireRole, requirePermission } from '../middleware/auth.js';
 import User from '../models/User.js';
@@ -47,6 +48,9 @@ router.post('/login', async (req, res) => {
 
 router.use(authenticateUser);
 router.use(requireAdmin);
+
+router.get('/me', getAdminMe);
+router.post('/logout', adminLogout);
 
 router.get('/dashboard', requirePermission('analytics'), getDashboardStats);
 router.get('/analytics', requirePermission('analytics'), getAnalytics);

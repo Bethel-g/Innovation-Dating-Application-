@@ -1,79 +1,34 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import { jobsAPI } from '../services/api';
 
 const JOB_TYPES = ['Full-time', 'Part-time', 'Contract', 'Freelance', 'Internship'];
 const EXPERIENCE = ['Entry', 'Mid', 'Senior', 'Lead', 'Executive'];
 const CATEGORIES = ['Engineering', 'Design', 'Product', 'Data Science', 'Marketing', 'Sales', 'Operations', 'Finance', 'HR', 'Legal'];
 
-const SAMPLE_JOBS = [
-  {
-    id: 1, title: 'Senior AI Engineer', company: 'TechCorp Africa', location: 'Remote', type: 'Full-time',
-    salary: '$120,000 - $150,000', posted: '2 days ago', applicants: 24,
-    skills: ['Python', 'TensorFlow', 'PyTorch', 'MLOps'],
-    description: 'Join our AI team to build cutting-edge machine learning solutions for healthcare across Africa.',
-    requirements: ['5+ years ML experience', 'Strong Python skills', 'Experience with production ML systems'],
-    benefits: ['Remote-first', 'Equity', 'Health insurance', 'Learning budget'],
-    isSaved: false,
-  },
-  {
-    id: 2, title: 'Full-Stack Developer', company: 'StartupX', location: 'Addis Ababa, Ethiopia', type: 'Full-time',
-    salary: '$60,000 - $80,000', posted: '1 day ago', applicants: 18,
-    skills: ['React', 'Node.js', 'PostgreSQL', 'TypeScript'],
-    description: 'Build the next generation of fintech products serving millions across Africa.',
-    requirements: ['3+ years full-stack', 'React & Node.js', 'Database design'],
-    benefits: ['Equity', 'Flexible hours', 'Team retreats'],
-    isSaved: true,
-  },
-  {
-    id: 3, title: 'Product Designer', company: 'GreenTech Solutions', location: 'Nairobi, Kenya', type: 'Full-time',
-    salary: '$70,000 - $90,000', posted: '3 days ago', applicants: 31,
-    skills: ['Figma', 'UI/UX Design', 'Prototyping', 'Design Systems'],
-    description: 'Design beautiful, intuitive products that help businesses reduce their carbon footprint.',
-    requirements: ['4+ years product design', 'Strong portfolio', 'User research experience'],
-    benefits: ['Mission-driven', 'Stock options', 'Remote flexibility'],
-    isSaved: false,
-  },
-  {
-    id: 4, title: 'Data Scientist', company: 'HealthAI', location: 'Remote', type: 'Contract',
-    salary: '$90,000 - $120,000', posted: '5 days ago', applicants: 42,
-    skills: ['Python', 'R', 'SQL', 'Machine Learning', 'Statistics'],
-    description: 'Analyze healthcare data to drive insights and improve patient outcomes across rural Africa.',
-    requirements: ['MS in Data Science or related', '3+ years experience', 'Healthcare domain knowledge preferred'],
-    benefits: ['High impact', 'Flexible schedule', 'Publication opportunities'],
-    isSaved: false,
-  },
-  {
-    id: 5, title: 'DevOps Engineer', company: 'CloudAfrica', location: 'Lagos, Nigeria', type: 'Full-time',
-    salary: '$80,000 - $100,000', posted: '1 week ago', applicants: 15,
-    skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'CI/CD'],
-    description: 'Build and maintain cloud infrastructure serving millions of users across the continent.',
-    requirements: ['4+ years DevOps', 'Cloud certifications preferred', 'Infrastructure as Code'],
-    benefits: ['Growth opportunity', 'Certification budget', 'Relocation assistance'],
-    isSaved: false,
-  },
-  {
-    id: 6, title: 'Marketing Manager', company: 'EduTech Africa', location: 'Addis Ababa', type: 'Full-time',
-    salary: '$40,000 - $55,000', posted: '4 days ago', applicants: 28,
-    skills: ['Digital Marketing', 'Content Strategy', 'SEO', 'Social Media'],
-    description: 'Lead marketing efforts to bring quality education to millions of African students.',
-    requirements: ['3+ years marketing', 'EdTech experience preferred', 'Data-driven mindset'],
-    benefits: ['Impact-driven', 'Team events', 'Professional development'],
-    isSaved: false,
-  },
-];
-
-function ApplicationFlow({ job, onClose }) {
+function ApplicationFlow({ job, onClose, onApplied }) {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({ coverLetter: '', experience: '', availability: 'immediately', salary: '' });
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setSubmitting(false);
-    setStep(3);
-    toast.success('Application submitted!');
+    try {
+      await jobsAPI.apply(job.id, {
+        coverLetter: form.coverLetter,
+        experience: form.experience,
+        availability: form.availability,
+        expectedSalary: form.salary,
+      });
+      setSubmitting(false);
+      setStep(3);
+      toast.success('Application submitted!');
+      if (onApplied) onApplied();
+    } catch (err) {
+      setSubmitting(false);
+      toast.error(err.response?.data?.message || 'Failed to submit application');
+    }
   };
 
   return (
@@ -172,30 +127,105 @@ function ApplicationFlow({ job, onClose }) {
 
 export default function Jobs() {
   const { user } = useAuth();
-  const [jobs, setJobs] = useState(SAMPLE_JOBS);
+  const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('browse');
   const [selectedJob, setSelectedJob] = useState(null);
   const [showApply, setShowApply] = useState(null);
   const [filters, setFilters] = useState({ type: 'all', category: 'all', experience: 'all', remote: false });
   const [searchQuery, setSearchQuery] = useState('');
-  const [savedJobs, setSavedJobs] = useState(new Set(jobs.filter(j => j.isSaved).map(j => j.id)));
+  const [savedJobs, setSavedJobs] = useState(new Set());
+  const [applications, setApplications] = useState([]);
+  const [postForm, setPostForm] = useState({
+    title: '', company: '', location: '', type: 'Full-time', category: 'Engineering', experience: 'Mid',
+    salary: '', description: '', requirements: '', benefits: '', skills: '', remote: false,
+  });
+  const [posting, setPosting] = useState(false);
 
-  const toggleSave = (jobId) => {
-    setSavedJobs(prev => {
-      const next = new Set(prev);
-      if (next.has(jobId)) next.delete(jobId);
-      else next.add(jobId);
-      return next;
-    });
-    toast.success(savedJobs.has(jobId) ? 'Job unsaved' : 'Job saved!');
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      const [jobsRes, savedRes, appsRes] = await Promise.all([
+        jobsAPI.getAll({ type: filters.type === 'all' ? 'all' : filters.type, category: filters.category === 'all' ? 'all' : filters.category, remote: filters.remote ? 'true' : 'false' }),
+        jobsAPI.getSaved(),
+        jobsAPI.getApplications(),
+      ]);
+      const jobList = Array.isArray(jobsRes.data) ? jobsRes.data : (jobsRes.data?.data || []);
+      const savedList = Array.isArray(savedRes.data) ? savedRes.data : (savedRes.data?.data || []);
+      const appsList = Array.isArray(appsRes.data) ? appsRes.data : (appsRes.data?.data || []);
+      setJobs(jobList);
+      setSavedJobs(new Set(savedList.map(j => j.id)));
+      setApplications(appsList);
+    } catch (err) {
+      if (err.response?.status !== 401) toast.error('Failed to load jobs');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
+  }, [filters.type, filters.category, filters.remote]);
+
+  const toggleSave = async (jobId) => {
+    const wasSaved = savedJobs.has(jobId);
+    try {
+      const res = await jobsAPI.save(jobId);
+      const nowSaved = res.data?.saved ?? !wasSaved;
+      setSavedJobs(prev => {
+        const next = new Set(prev);
+        if (nowSaved) next.add(jobId);
+        else next.delete(jobId);
+        return next;
+      });
+      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, isSaved: nowSaved } : j)));
+      toast.success(nowSaved ? 'Job saved!' : 'Job unsaved');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not update saved jobs');
+    }
+  };
+
+  const handlePostJob = async () => {
+    if (!postForm.title || !postForm.description) {
+      toast.error('Job title and description are required');
+      return;
+    }
+    setPosting(true);
+    try {
+      const res = await jobsAPI.create({
+        title: postForm.title,
+        company: postForm.company,
+        location: postForm.location,
+        type: postForm.type,
+        category: postForm.category,
+        salary: postForm.salary,
+        description: postForm.description,
+        requirements: postForm.requirements.split(',').map(s => s.trim()).filter(Boolean),
+        benefits: postForm.benefits.split(',').map(s => s.trim()).filter(Boolean),
+        skills: postForm.skills.split(',').map(s => s.trim()).filter(Boolean),
+        remote: postForm.remote,
+      });
+      toast.success('Job posted successfully!');
+      setPostForm({ title: '', company: '', location: '', type: 'Full-time', category: 'Engineering', salary: '', description: '', requirements: '', benefits: '', skills: '', remote: false });
+      setActiveTab('browse');
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to post job');
+    } finally {
+      setPosting(false);
+    }
   };
 
   const filteredJobs = jobs
     .filter(j => filters.type === 'all' || j.type === filters.type)
-    .filter(j => filters.experience === 'all' || true)
-    .filter(j => !filters.remote || j.location.toLowerCase().includes('remote'))
-    .filter(j => !searchQuery || j.title.toLowerCase().includes(searchQuery.toLowerCase()) || j.company.toLowerCase().includes(searchQuery.toLowerCase()) || j.skills.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())));
+    .filter(j => filters.category === 'all' || j.category === filters.category)
+    .filter(j => !filters.remote || String(j.location || '').toLowerCase().includes('remote'))
+    .filter(j => !searchQuery || (j.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (j.company || '').toLowerCase().includes(searchQuery.toLowerCase()) || (j.skills || []).some(s => String(s).toLowerCase().includes(searchQuery.toLowerCase())));
+
+  const pipelineCounts = (applications || []).reduce((acc, a) => {
+    acc[a.status] = (acc[a.status] || 0) + 1;
+    return acc;
+  }, {});
 
   return (
     <div className="jobs-page page-transition">
@@ -231,6 +261,10 @@ export default function Jobs() {
                 <option value="all">All Types</option>
                 {JOB_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
+              <select value={filters.category} onChange={e => setFilters({ ...filters, category: e.target.value })}>
+                <option value="all">All Categories</option>
+                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
               <label className="remote-toggle">
                 <input type="checkbox" checked={filters.remote} onChange={e => setFilters({ ...filters, remote: e.target.checked })} />
                 <span>Remote Only</span>
@@ -238,6 +272,15 @@ export default function Jobs() {
             </div>
           </div>
 
+          {loading && (
+            <div className="empty-state">
+              <div className="empty-icon">⏳</div>
+              <h3>Loading jobs...</h3>
+            </div>
+          )}
+
+          {!loading && (
+          <>
           <div className="jobs-grid">
             {filteredJobs.map(job => (
               <div key={job.id} className={`job-card card ${selectedJob?.id === job.id ? 'selected' : ''}`} onClick={() => setSelectedJob(job)}>
@@ -284,6 +327,8 @@ export default function Jobs() {
               <p>Try adjusting your filters or search terms</p>
             </div>
           )}
+          </>
+          )}
         </div>
       )}
 
@@ -326,31 +371,51 @@ export default function Jobs() {
             <h3>Application Pipeline</h3>
             <div className="pipeline-stages">
               <div className="pipeline-stage">
-                <span className="pipeline-count">2</span>
+                <span className="pipeline-count">{pipelineCounts.applied || 0}</span>
                 <span className="pipeline-label">Applied</span>
               </div>
               <div className="pipeline-arrow">→</div>
-              <div className="pipeline-stage active">
-                <span className="pipeline-count">1</span>
+              <div className="pipeline-stage">
+                <span className="pipeline-count">{pipelineCounts.review || 0}</span>
                 <span className="pipeline-label">Review</span>
               </div>
               <div className="pipeline-arrow">→</div>
               <div className="pipeline-stage">
-                <span className="pipeline-count">0</span>
+                <span className="pipeline-count">{pipelineCounts.interview || 0}</span>
                 <span className="pipeline-label">Interview</span>
               </div>
               <div className="pipeline-arrow">→</div>
               <div className="pipeline-stage">
-                <span className="pipeline-count">0</span>
+                <span className="pipeline-count">{pipelineCounts.offer || 0}</span>
                 <span className="pipeline-label">Offer</span>
               </div>
             </div>
           </div>
-          <div className="empty-state">
-            <div className="empty-icon">📋</div>
-            <h3>Your applications will appear here</h3>
-            <p>Apply to jobs to track your progress</p>
+          <div className="jobs-grid">
+            {(applications || []).map(app => (
+              <div key={app.id} className="job-card card" onClick={() => setSelectedJob(app.job)}>
+                <div className="job-card-header">
+                  <div className="job-company-logo">{app.job?.company?.[0] || 'J'}</div>
+                  <div className="job-header-info">
+                    <h3>{app.job?.title || 'Job'}</h3>
+                    <p className="job-company">{app.job?.company || ''}</p>
+                  </div>
+                  <span className="application-status">{app.status}</span>
+                </div>
+                <div className="job-meta">
+                  <span className="job-meta-item">📍 {app.job?.location}</span>
+                  <span className="job-meta-item">📅 Applied {new Date(app.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
           </div>
+          {(applications || []).length === 0 && (
+            <div className="empty-state">
+              <div className="empty-icon">📋</div>
+              <h3>Your applications will appear here</h3>
+              <p>Apply to jobs to track your progress</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -361,37 +426,69 @@ export default function Jobs() {
             <p className="post-job-desc">Reach thousands of talented professionals across Africa</p>
             <div className="form-group">
               <label>Job Title</label>
-              <input placeholder="e.g., Senior React Developer" />
+              <input value={postForm.title} onChange={e => setPostForm({ ...postForm, title: e.target.value })} placeholder="e.g., Senior React Developer" />
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Company</label>
-                <input placeholder="Your company name" />
+                <input value={postForm.company} onChange={e => setPostForm({ ...postForm, company: e.target.value })} placeholder="Your company name" />
               </div>
               <div className="form-group">
                 <label>Location</label>
-                <input placeholder="e.g., Remote, Addis Ababa" />
+                <input value={postForm.location} onChange={e => setPostForm({ ...postForm, location: e.target.value })} placeholder="e.g., Remote, Addis Ababa" />
               </div>
             </div>
             <div className="form-row">
               <div className="form-group">
                 <label>Job Type</label>
-                <select>{JOB_TYPES.map(t => <option key={t}>{t}</option>)}</select>
+                <select value={postForm.type} onChange={e => setPostForm({ ...postForm, type: e.target.value })}>
+                  {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
               </div>
               <div className="form-group">
+                <label>Category</label>
+                <select value={postForm.category} onChange={e => setPostForm({ ...postForm, category: e.target.value })}>
+                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group">
                 <label>Salary Range</label>
-                <input placeholder="e.g., $60,000 - $80,000" />
+                <input value={postForm.salary} onChange={e => setPostForm({ ...postForm, salary: e.target.value })} placeholder="e.g., $60,000 - $80,000" />
+              </div>
+              <div className="form-group">
+                <label>Experience Level</label>
+                <select value={postForm.experience} onChange={e => setPostForm({ ...postForm, experience: e.target.value })}>
+                  {EXPERIENCE.map(x => <option key={x}>{x}</option>)}
+                </select>
               </div>
             </div>
             <div className="form-group">
               <label>Description</label>
-              <textarea rows={5} placeholder="Describe the role, responsibilities, and what you're looking for..." />
+              <textarea value={postForm.description} onChange={e => setPostForm({ ...postForm, description: e.target.value })} rows={5} placeholder="Describe the role, responsibilities, and what you're looking for..." />
             </div>
             <div className="form-group">
               <label>Required Skills</label>
-              <input placeholder="e.g., React, Node.js, PostgreSQL (comma separated)" />
+              <input value={postForm.skills} onChange={e => setPostForm({ ...postForm, skills: e.target.value })} placeholder="e.g., React, Node.js, PostgreSQL (comma separated)" />
             </div>
-            <button className="btn btn-primary">Post Job — $49</button>
+            <div className="form-group">
+              <label>Requirements <em>(comma separated)</em></label>
+              <input value={postForm.requirements} onChange={e => setPostForm({ ...postForm, requirements: e.target.value })} placeholder="e.g., 3+ years full-stack, React, Node.js" />
+            </div>
+            <div className="form-group">
+              <label>Benefits <em>(comma separated)</em></label>
+              <input value={postForm.benefits} onChange={e => setPostForm({ ...postForm, benefits: e.target.value })} placeholder="e.g., Equity, Health insurance, Remote" />
+            </div>
+            <div className="form-group">
+              <label className="remote-toggle">
+                <input type="checkbox" checked={postForm.remote} onChange={e => setPostForm({ ...postForm, remote: e.target.checked })} />
+                <span>Remote position</span>
+              </label>
+            </div>
+            <button className="btn btn-primary" onClick={handlePostJob} disabled={posting}>
+              {posting ? 'Posting...' : 'Post Job'}
+            </button>
           </div>
         </div>
       )}
@@ -431,7 +528,7 @@ export default function Jobs() {
         </div>
       )}
 
-      {showApply && <ApplicationFlow job={showApply} onClose={() => setShowApply(null)} />}
+      {showApply && <ApplicationFlow job={showApply} onClose={() => setShowApply(null)} onApplied={fetchAll} />}
 
       <style>{`
         .jobs-page { max-width: 1000px; margin: 0 auto; }
@@ -472,6 +569,7 @@ export default function Jobs() {
         .job-description { font-size: 14px; color: var(--text-light); line-height: 1.5; margin-bottom: 12px; }
         .job-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
         .job-applicants { font-size: 13px; color: var(--text-light); }
+        .application-status { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: rgba(74,108,247,0.1); color: var(--primary); text-transform: capitalize; }
 
         .apply-company { color: var(--primary); font-size: 14px; margin-bottom: 16px; }
         .apply-steps { display: flex; gap: 0; margin-bottom: 20px; }

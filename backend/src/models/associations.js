@@ -14,6 +14,14 @@ import Connection from './Connection.js';
 import VerificationRequest from './VerificationRequest.js';
 import Bookmark from './Bookmark.js';
 import NotificationPreference from './NotificationPreference.js';
+import MentorshipSession from './MentorshipSession.js';
+import Review from './Review.js';
+import IdeaComment from './IdeaComment.js';
+import Job from './Job.js';
+import JobApplication from './JobApplication.js';
+import JobSave from './JobSave.js';
+import Event from './Event.js';
+import EventRegistration from './EventRegistration.js';
 
 // ===== Identity & Profiles =====
 User.hasMany(Idea, { foreignKey: 'author', as: 'ideas' });
@@ -69,9 +77,37 @@ VerificationRequest.belongsTo(Organization, { foreignKey: 'organizationId', as: 
 Bookmark.belongsTo(User, { foreignKey: 'user', as: 'owner' });
 NotificationPreference.belongsTo(User, { foreignKey: 'user', as: 'owner' });
 
+// ===== Mentorship =====
+MentorshipSession.belongsTo(User, { foreignKey: 'mentor', as: 'mentorProfile' });
+MentorshipSession.belongsTo(User, { foreignKey: 'mentee', as: 'menteeProfile' });
+
+// ===== Reviews =====
+Review.belongsTo(User, { foreignKey: 'reviewer', as: 'reviewerProfile' });
+Review.belongsTo(User, { foreignKey: 'reviewed', as: 'reviewedProfile' });
+
+// ===== Idea comments =====
+Idea.hasMany(IdeaComment, { foreignKey: 'idea', as: 'comments' });
+IdeaComment.belongsTo(Idea, { foreignKey: 'idea', as: 'ideaDetail' });
+IdeaComment.belongsTo(User, { foreignKey: 'author', as: 'authorProfile' });
+
+// ===== Jobs =====
+Job.belongsTo(User, { foreignKey: 'author', as: 'authorProfile' });
+Organization.hasMany(Job, { foreignKey: 'author', as: 'jobs' });
+JobApplication.belongsTo(Job, { foreignKey: 'job', as: 'jobDetail' });
+JobApplication.belongsTo(User, { foreignKey: 'applicant', as: 'applicantProfile' });
+JobSave.belongsTo(Job, { foreignKey: 'job', as: 'jobDetail' });
+JobSave.belongsTo(User, { foreignKey: 'user', as: 'owner' });
+
+// ===== Events =====
+Event.belongsTo(User, { foreignKey: 'organizer', as: 'organizerProfile' });
+Event.hasMany(EventRegistration, { foreignKey: 'event', as: 'registrations' });
+EventRegistration.belongsTo(Event, { foreignKey: 'event', as: 'eventDetail' });
+EventRegistration.belongsTo(User, { foreignKey: 'user', as: 'userProfile' });
+
 export {
   User, Idea, Post, Project, Notification,
   Organization, Opportunity, OpportunityApplication,
   TeamRole, RoleApplication, Team, TeamMember,
   Connection, VerificationRequest, Bookmark, NotificationPreference,
+  MentorshipSession, IdeaComment, Job, JobApplication, JobSave, Event, EventRegistration,
 };

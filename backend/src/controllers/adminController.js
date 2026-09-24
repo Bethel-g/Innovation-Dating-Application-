@@ -807,3 +807,27 @@ export const updateUserRole = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getAdminMe = async (req, res) => {
+  try {
+    const user = await User.findByPk(req.userId, {
+      attributes: { exclude: ['password'] },
+    });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({ admin: user });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const adminLogout = async (req, res) => {
+  try {
+    await User.update(
+      { isOnline: false, lastActive: new Date() },
+      { where: { id: req.userId } }
+    );
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

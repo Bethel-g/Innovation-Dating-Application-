@@ -147,7 +147,36 @@ export const skillsAPI = {
   removeSkill: (skill) => api.delete(`/skills/${skill}`),
 };
 
+export const jobsAPI = {
+  getAll: (params) => api.get('/jobs', { params }),
+  getById: (id) => api.get(`/jobs/${id}`),
+  create: (data) => api.post('/jobs', data),
+  apply: (id, data) => api.post(`/jobs/${id}/apply`, data),
+  save: (id) => api.post(`/jobs/${id}/save`),
+  getSaved: () => api.get('/jobs/saved'),
+  getApplications: () => api.get('/jobs/applications'),
+};
+
+export const eventsAPI = {
+  getAll: (params) => api.get('/events', { params }),
+  getById: (id) => api.get(`/events/${id}`),
+  create: (data) => api.post('/events', data),
+  register: (id) => api.post(`/events/${id}/register`),
+  getRegistered: () => api.get('/events/registered'),
+};
+
+export const organizationsAPI = {
+  create: (data) => api.post('/organizations', data),
+  getAll: (params) => api.get('/organizations', { params }),
+  getById: (id) => api.get(`/organizations/${id}`),
+  update: (id, data) => api.put(`/organizations/${id}`, data),
+};
+
 export const adminAPI = {
+  get: (path, config) => api.get(path, config),
+  post: (path, data, config) => api.post(path, data, config),
+  put: (path, data, config) => api.put(path, data, config),
+  delete: (path, config) => api.delete(path, config),
   getDashboardStats: () => api.get('/admin/dashboard'),
   getUsers: (params) => api.get('/admin/users', { params }),
   getUser: (id) => api.get(`/admin/users/${id}`),

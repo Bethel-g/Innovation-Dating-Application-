@@ -34,6 +34,13 @@ import './models/Review.js';
 import './models/GroupMessage.js';
 import './models/ActivityLog.js';
 import './models/SharedFile.js';
+import './models/MentorshipSession.js';
+import './models/IdeaComment.js';
+import './models/Job.js';
+import './models/JobApplication.js';
+import './models/JobSave.js';
+import './models/Event.js';
+import './models/EventRegistration.js';
 import './models/associations.js';
 
 import authRoutes from './routes/auth.js';
@@ -56,6 +63,10 @@ import teamRoutes from './routes/team.js';
 import opportunityRoutes from './routes/opportunities.js';
 import organizationRoutes from './routes/organizations.js';
 import bookmarkRoutes from './routes/bookmarks.js';
+import mentorRoutes from './routes/mentors.js';
+import skillRoutes from './routes/skills.js';
+import jobRoutes from './routes/jobs.js';
+import eventRoutes from './routes/events.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { autoCloseExpired } from './controllers/opportunityController.js';
 
@@ -109,6 +120,10 @@ app.use('/api/team', teamRoutes);
 app.use('/api/opportunities', opportunityRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/bookmarks', bookmarkRoutes);
+app.use('/api/mentors', mentorRoutes);
+app.use('/api/skills', skillRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/events', eventRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

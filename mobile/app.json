@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "Innovation Dating",
+    "slug": "innovation-dating",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.innodating.app"
+    },
+    "android": {
+      "package": "com.innodating.app"
+    }
+  }
+}

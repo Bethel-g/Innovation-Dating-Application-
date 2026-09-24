@@ -16,6 +16,16 @@ const CATEGORIES = [
 
 const STAGES = ['Concept', 'Planning', 'MVP', 'Building', 'Launched'];
 
+function normalizeIdea(idea) {
+  return {
+    ...idea,
+    problem: idea.problem || idea.problemStatement || '',
+    solution: idea.solution || idea.proposedSolution || '',
+    author: idea.author || idea.authorDetail || null,
+    skillsNeeded: idea.skillsNeeded || [],
+  };
+}
+
 function ProgressTracker({ stage }) {
   const currentIdx = STAGES.indexOf(stage) || 0;
   return (
@@ -187,7 +197,8 @@ export default function IdeaRooms() {
   const loadIdeas = async () => {
     try {
       const res = await ideasAPI.getAll({ status: 'open' });
-      setIdeas(res.data);
+      const list = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+      setIdeas(list.map(normalizeIdea));
     } catch (err) {
       toast.error('Failed to load ideas');
     } finally {
@@ -200,7 +211,7 @@ export default function IdeaRooms() {
     setSubmitting(true);
     try {
       const res = await ideasAPI.create(form);
-      setIdeas(prev => [res.data, ...prev]);
+      setIdeas(prev => [normalizeIdea(res.data?.data || res.data), ...prev]);
       setShowCreate(false);
       setForm({ title: '', problem: '', solution: '', skillsNeeded: [], collaborationType: 'open', category: 'tech', stage: 'Concept' });
       toast.success('Idea posted!');
@@ -213,17 +224,17 @@ export default function IdeaRooms() {
 
   const handleJoin = async (ideaId) => {
     try {
-      await ideasAPI.join(ideaId, { userId: user.id });
+      await ideasAPI.join(ideaId, { message: `${user.name} wants to join your team` });
       toast.success('Application submitted!');
       loadIdeas();
     } catch (err) {
-      toast.error('Failed to apply');
+      toast.error(err.response?.data?.message || 'Failed to apply');
     }
   };
 
   const handleFollow = async (ideaId) => {
     try {
-      await ideasAPI.follow?.(ideaId, { userId: user.id }) || await ideasAPI.join(ideaId, { userId: user.id });
+      await ideasAPI.join(ideaId, { message: `${user.name} is interested in this idea` });
       loadIdeas();
     } catch {
       toast.error('Failed to follow');

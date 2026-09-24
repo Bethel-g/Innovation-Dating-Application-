@@ -7,9 +7,74 @@ import Community from './models/Community.js';
 import CommunityMember from './models/CommunityMember.js';
 import Organization from './models/Organization.js';
 import Opportunity from './models/Opportunity.js';
+import OpportunityApplication from './models/OpportunityApplication.js';
+import Match from './models/Match.js';
+import Message from './models/Message.js';
+import Notification from './models/Notification.js';
+import NotificationCampaign from './models/NotificationCampaign.js';
+import Connection from './models/Connection.js';
+import Idea from './models/Idea.js';
+import IdeaComment from './models/IdeaComment.js';
+import Team from './models/Team.js';
+import TeamRole from './models/TeamRole.js';
+import TeamMember from './models/TeamMember.js';
+import RoleApplication from './models/RoleApplication.js';
+import Task from './models/Task.js';
+import Contribution from './models/Contribution.js';
+import Endorsement from './models/Endorsement.js';
+import Review from './models/Review.js';
+import Badge from './models/Badge.js';
+import Bookmark from './models/Bookmark.js';
+import MentorshipSession from './models/MentorshipSession.js';
+import Job from './models/Job.js';
+import JobApplication from './models/JobApplication.js';
+import JobSave from './models/JobSave.js';
+import Event from './models/Event.js';
+import EventRegistration from './models/EventRegistration.js';
+
+const cleanupTables = [
+  EventRegistration,
+  MentorshipSession,
+  JobApplication,
+  Job,
+  JobSave,
+  Event,
+  IdeaComment,
+  RoleApplication,
+  TeamMember,
+  TeamRole,
+  Team,
+  Bookmark,
+  Endorsement,
+  Review,
+  Contribution,
+  Badge,
+  Task,
+  Connection,
+  Idea,
+  OpportunityApplication,
+  Opportunity,
+  Organization,
+  Notification,
+  NotificationCampaign,
+  Message,
+  Match,
+  CommunityMember,
+  Community,
+  ProjectMember,
+  Project,
+  Post,
+  Follow,
+  User,
+];
 
 const seed = async () => {
   console.log('Seeding database...');
+
+  for (const model of cleanupTables) {
+    await model.destroy({ where: {} });
+  }
+  console.log('Existing data cleared');
 
   const users = [
     {
@@ -413,6 +478,143 @@ const seed = async () => {
   });
   console.log(`Opportunity created: ${opportunity.title}`);
 
+  const jobsData = [
+    {
+      author: marcusId,
+      title: 'Full-Stack Engineer (HealthTech)',
+      company: 'InnoLink Health Innovation Hub',
+      location: 'San Francisco, CA',
+      type: 'Full-time',
+      experience: 'Mid',
+      category: 'Engineering',
+      salary: '$140k - $170k',
+      description: 'Build the next generation of connected-care tools for underserved communities. You will own features end-to-end across our React + Node.js platform.',
+      requirements: ['4+ years full-stack experience', 'React + Node.js production apps', 'PostgreSQL / SQL', 'Comfort with health data privacy (HIPAA a plus)'],
+      benefits: ['Health, dental & vision insurance', 'Equity package', 'Remote-flex hybrid', 'Learning budget'],
+      skills: ['react', 'nodejs', 'postgresql', 'healthcare'],
+      remote: false,
+    },
+    {
+      author: emailToId['alex@example.com'],
+      title: 'Machine Learning Engineer — Diagnostics AI',
+      company: 'MediScan AI Labs',
+      location: 'Remote',
+      type: 'Full-time',
+      experience: 'Senior',
+      category: 'AI/ML',
+      salary: '$180k - $220k',
+      description: 'Own the training and deployment of diagnostic models used by 40+ clinics. Focus on reproducibility, monitoring and FDA-ready documentation.',
+      requirements: ['5+ years ML engineering', 'Deep learning frameworks (PyTorch)', 'MLOps / model monitoring', 'Medical imaging experience a plus'],
+      benefits: ['Remote-first', 'Top-tier equity', 'Four-day work week', 'Conference budget'],
+      skills: ['python', 'machine_learning', 'pytorch', 'mlops'],
+      remote: true,
+    },
+    {
+      author: emailToId['priya@example.com'],
+      title: 'Product Designer — Digital Therapeutics',
+      company: 'MindScale',
+      location: 'New York, NY',
+      type: 'Contract',
+      experience: 'Mid',
+      category: 'Design',
+      salary: '$90 - $110 / hr',
+      description: 'Design intuitive, evidence-based digital therapeutic journeys. You will work directly with clinical researchers to translate protocols into delightful product flows.',
+      requirements: ['4+ years product design', 'Strong UX research skills', 'Prototyping in Figma', 'Health / fintech experience a plus'],
+      benefits: ['Fully remote', 'Flexible hours', 'Portfolio-building product'],
+      skills: ['ux_design', 'figma', 'product_design', 'healthcare'],
+      remote: true,
+    },
+    {
+      author: sarahId,
+      title: 'Frontend Developer Intern',
+      company: 'CodeCraft Ventures',
+      location: 'Austin, TX',
+      type: 'Internship',
+      experience: 'Entry',
+      category: 'Engineering',
+      salary: '$5,000 / mo',
+      description: 'Join our 12-week paid internship building real production features for startups in our portfolio. Mentorship from senior engineers guaranteed.',
+      requirements: ['React fundamentals', 'JavaScript / TypeScript', 'Passion for clean UI', 'Portfolio or open-source work'],
+      benefits: ['Paid internship', 'Mentorship program', 'Conversion opportunities', 'Housing stipend for relocation'],
+      skills: ['react', 'javascript', 'typescript'],
+      remote: false,
+    },
+  ];
+
+  for (const jobData of jobsData) {
+    await Job.create(jobData);
+  }
+  console.log(`Jobs created: ${jobsData.length}`);
+
+  const eventsData = [
+    {
+      organizer: marcusId,
+      title: 'HealthTech Founders Pitch Night',
+      type: 'pitch',
+      description: 'Five early-stage HealthTech startups pitch to a room of investors and clinical advisors. Network with founders, clinicians and VCs afterwards.',
+      date: '2026-10-15',
+      time: '6:00 PM',
+      location: 'InnoLink Hub, San Francisco',
+      isOnline: false,
+      isFree: true,
+      maxAttendees: 80,
+      speakers: ['Dr. Lena Ortiz — Chief Advisor, MediScan AI', 'Raj Patel — Partner, NorthStar Ventures'],
+      tags: ['pitch', 'healthtech', 'investors'],
+      isFeatured: true,
+    },
+    {
+      organizer: emailToId['emma@example.com'],
+      title: 'AI for Diagnostics Hackathon',
+      type: 'hackathon',
+      description: 'A 48-hour weekend hackathon: build models and prototypes for real diagnostics challenges. Winning teams receive $10K in credits and an incubation slot.',
+      date: '2026-11-07',
+      time: '9:00 AM',
+      location: 'Online',
+      isOnline: true,
+      isFree: true,
+      maxAttendees: 200,
+      speakers: ['Emma Chen — Biosensor Lead, MedTech Labs'],
+      tags: ['hackathon', 'ai', 'medical imaging'],
+      isFeatured: true,
+    },
+    {
+      organizer: emailToId['james@example.com'],
+      title: 'Digital Health Data Science Meetup',
+      type: 'meetup',
+      description: 'Monthly meetup for health data scientists. This month: remote monitoring data pipelines and telemedicine adoption analytics.',
+      date: '2026-09-30',
+      time: '5:30 PM',
+      location: 'Online',
+      isOnline: true,
+      isFree: true,
+      maxAttendees: 120,
+      speakers: ['James Moreno — Senior DS, HealthAnalytics'],
+      tags: ['data_science', 'telemedicine', 'meetup'],
+      isFeatured: false,
+    },
+    {
+      organizer: emailToId['priya@example.com'],
+      title: 'UX Research for Digital Therapeutics Masterclass',
+      type: 'webinar',
+      description: 'A live masterclass on running UX research inside regulated health products — IRB basics, patient journey mapping and usability testing with clinicians.',
+      date: '2026-10-22',
+      time: '12:00 PM',
+      location: 'Online',
+      isOnline: true,
+      isFree: false,
+      price: '$25',
+      maxAttendees: 150,
+      speakers: ['Priya Sharma — Lead UX Researcher'],
+      tags: ['ux_research', 'digital_therapeutics', 'masterclass'],
+      isFeatured: false,
+    },
+  ];
+
+  for (const eventData of eventsData) {
+    await Event.create(eventData);
+  }
+  console.log(`Events created: ${eventsData.length}`);
+
   console.log('\n=== SEED COMPLETE ===');
   console.log('Portal: http://localhost:5173');
   console.log('  Admin:          admin@innoconnect.dev      / Admin@12345');
@@ -423,7 +625,7 @@ const seed = async () => {
   console.log('  MedTech:        emma@example.com        / password123  (technical_builder)');
   console.log('  DataScientist:  james@example.com       / password123  (domain_expert)');
   console.log('  Investor:       elena@example.com       / password123  (investor)');
-  console.log(`\n${followPairs.length} follows, ${postsData.length} posts, ${projectsData.length} projects, ${communitiesData.length} communities, 1 organization, 1 opportunity created`);
+  console.log(`\n${followPairs.length} follows, ${postsData.length} posts, ${projectsData.length} projects, ${communitiesData.length} communities, 1 organization, 1 opportunity, ${jobsData.length} jobs, ${eventsData.length} events created`);
 };
 
 export default seed;

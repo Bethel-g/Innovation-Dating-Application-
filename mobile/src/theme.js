@@ -1,0 +1,41 @@
+import { StyleSheet } from 'react-native';
+
+export const colors = {
+  primary: '#4a6cf7',
+  secondary: '#8b5cf6',
+  bg: '#f5f6fa',
+  card: '#ffffff',
+  text: '#1a1a2e',
+  textLight: '#6b7280',
+  border: '#e5e7eb',
+  success: '#22c55e',
+  danger: '#ef4444',
+};
+
+export const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.bg },
+  container: { padding: 16 },
+  card: { backgroundColor: colors.card, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: colors.textLight, marginBottom: 16 },
+  h2: { fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 },
+  textLight: { fontSize: 13, color: colors.textLight },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  between: { justifyContent: 'space-between' },
+  primaryBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  outlineBtn: { borderWidth: 1.5, borderColor: colors.primary, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  primaryBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  outlineBtnText: { color: colors.primary, fontWeight: '700', fontSize: 13 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, backgroundColor: colors.card, color: colors.text, marginBottom: 12 },
+  inputLabel: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: 6 },
+  tag: { backgroundColor: 'rgba(74,108,247,0.1)', color: colors.primary, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, fontSize: 12, fontWeight: '600', marginRight: 6, marginBottom: 6, overflow: 'hidden' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  empty: { alignItems: 'center', padding: 40 },
+  emptyIcon: { fontSize: 48, marginBottom: 8 },
+  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text },
+  emptyText: { fontSize: 14, color: colors.textLight, textAlign: 'center' },
+  loading: { alignItems: 'center', padding: 40 },
+  image: { width: 64, height: 64, borderRadius: 32 },
+  divider: { height: 1, backgroundColor: colors.border, marginVertical: 10 },
+});

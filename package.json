@@ -12,9 +12,16 @@
     "dev": "concurrently \"npm run backend\" \"npm run client\" \"npm run admin\"",
     "test": "npm test",
     "test:backend": "cd backend && node --experimental-vm-modules --test",
-    "test:frontend": "cd client && npm test"
+    "test:frontend": "cd client && npm test",
+    "test:e2e": "playwright test",
+    "test:e2e:debug": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:seed": "cd backend && npm run seed"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "concurrently": "^8.2.2"
   }
 }
